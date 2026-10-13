@@ -1,30 +1,38 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:life_os/main.dart';
+import 'package:life_os/app/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets(
+    'home shell presents LIFE OS and navigates to foundation sections',
+    (tester) async {
+      await tester.pumpWidget(const ProviderScope(child: LifeOsApp()));
+      await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(find.text('LIFE OS'), findsOneWidget);
+      expect(find.text('Make room for\nwhat matters.'), findsOneWidget);
+      expect(find.text('Today’s rhythm'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      await tester.tap(find.text('Plan').last);
+      await tester.pumpAndSettle();
+      expect(find.text('LIFE OS / PLAN'), findsOneWidget);
+      expect(find.text('Plan is part of the foundation'), findsOneWidget);
+    },
+  );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('wide layout shows the persistent navigation rail', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ProviderScope(child: LifeOsApp()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('WORKSPACE'), findsOneWidget);
+    expect(find.text('Insights'), findsOneWidget);
   });
 }
