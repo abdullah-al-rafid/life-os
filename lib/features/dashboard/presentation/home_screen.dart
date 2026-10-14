@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +16,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(planningItemsProvider(null));
+    final history = ref.watch(planningHistoryProvider(null));
     final now = DateTime.now();
+    final todayKey =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1120),
@@ -52,6 +57,15 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const TrackingSummaryCard(),
+                    const SizedBox(height: AppSpacing.lg),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/screen-time'),
+                        icon: const Icon(Icons.query_stats_outlined),
+                        label: const Text('Screen Time'),
+                      ),
+                    ),
                     const SizedBox(height: AppSpacing.lg),
                     SurfaceCard(
                       child: Row(
@@ -153,6 +167,48 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    history.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, _) => const Text(
+                        'Today’s completion progress is unavailable.',
+                      ),
+                      data: (entries) {
+                        final tasks =
+                            items.asData?.value
+                                .where(
+                                  (item) =>
+                                      item.kind == PlanningKind.task &&
+                                      item.occursOn(now),
+                                )
+                                .toList() ??
+                            const <PlanningItem>[];
+                        final taskIds = tasks.map((item) => item.id).toSet();
+                        final completedIds = <String>{};
+                        for (final entry in entries) {
+                          if (entry.kind != 'taskCompletion' ||
+                              entry.localDate != todayKey ||
+                              !taskIds.contains(entry.definitionId)) {
+                            continue;
+                          }
+                          try {
+                            final payload =
+                                jsonDecode(entry.payload)
+                                    as Map<String, dynamic>;
+                            if (payload['status'] ==
+                                CompletionStatus.done.name) {
+                              completedIds.add(entry.definitionId);
+                            }
+                          } on Object {
+                            // Invalid historical payloads do not count as done.
+                          }
+                        }
+                        return Text(
+                          'Completion progress: ${completedIds.length}/${tasks.length} tasks done',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -173,11 +229,31 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               data: (all) {
-                final today = all
-                    .where(
-                      (i) => i.kind != PlanningKind.goal && i.occursOn(now),
-                    )
-                    .toList();
+                final today =
+                    all
+                        .where(
+                          (i) =>
+                              i.kind != PlanningKind.goal &&
+                              (i.occursOn(now) ||
+                                  (i.kind == PlanningKind.task &&
+                                      i.scheduledDate != null &&
+                                      i.scheduledDate!.compareTo(todayKey) <
+                                          0)),
+                        )
+                        .toList()
+                      ..sort((a, b) {
+                        final aOverdue =
+                            a.scheduledDate != null &&
+                            a.scheduledDate!.compareTo(todayKey) < 0;
+                        final bOverdue =
+                            b.scheduledDate != null &&
+                            b.scheduledDate!.compareTo(todayKey) < 0;
+                        if (aOverdue != bOverdue) return aOverdue ? -1 : 1;
+                        final byPriority = a.priority.compareTo(b.priority);
+                        return byPriority != 0
+                            ? byPriority
+                            : a.scheduledMinute.compareTo(b.scheduledMinute);
+                      });
                 if (today.isEmpty) {
                   return const SliverToBoxAdapter(
                     child: Padding(
@@ -219,7 +295,7 @@ class HomeScreen extends ConsumerWidget {
                                   ).textTheme.titleMedium,
                                 ),
                                 Text(
-                                  '${today[index].kind.name} · ${today[index].durationMinutes} min',
+                                  '${today[index].scheduledDate != null && today[index].scheduledDate!.compareTo(todayKey) < 0 ? 'Overdue · ' : ''}${today[index].kind.name} · Priority ${today[index].priority} · ${today[index].durationMinutes} min',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],

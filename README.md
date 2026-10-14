@@ -1,6 +1,6 @@
 # LIFE OS
 
-Android-first personal life management app for Abdullah Al Rafid and Jannat. Phases 1–4 establish responsive UI, Firebase email/password authentication, offline-first Drift/SQLite storage, and local task, routine, goal, and habit workflows. Remote synchronization is not implemented.
+Android-first personal life management app for Abdullah Al Rafid and Jannat. The app provides responsive UI, Firebase email/password authentication, offline-first Drift/SQLite storage, local task/routine/goal/habit workflows, prayer and wellness tracking, prayer reminders, and a local File-to-15-Day Task Planner. Task completion supports optional private local evidence attachments. Android Screen Time summaries are available only after the user grants Usage Access. Rolling planning is a limited carryover proposal. PDF reports, JSON backup/restore, complete adaptive planning, and remote synchronization are not implemented.
 
 ## Project documents
 
@@ -20,7 +20,7 @@ test/        critical widget coverage
 docs/        requirements, status, and architecture decisions
 ```
 
-The responsive shell uses bottom navigation on compact widths and a persistent side navigation on wide layouts. Home, Plan, Goals, Insights, and Settings are available. Plan supports local task, routine, and habit definitions, completion results, archive, and safe tombstone deletion. Goals keep append-only measurements and show progress. Insights summarizes recent activity and habit history. Authentication includes sign-in, sign-out, password reset, persisted Firebase auth state, and protected app routes. There is no in-app account creation.
+The responsive shell uses bottom navigation on compact widths and a persistent side navigation on wide layouts. Home, Plan, Goals, Insights, and Settings are available. Plan supports local task, routine, and habit definitions, completion results, archive, safe tombstone deletion, date selection, file-based 15-day plan import, and an initial approval-only rolling carryover proposal. The rolling proposal is partial and does not yet account for goals, deadlines, or all routine workload. Goals keep append-only measurements and show progress. Insights summarizes recent activity, habits, tracking, and upcoming imported tasks. Authentication includes sign-in, sign-out, password reset, persisted Firebase auth state, and protected app routes. There is no in-app account creation.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ The target implementation uses Flutter/Dart and requires separate authenticated 
 
 Phase 1 was developed with Flutter 3.41.2 stable and Dart 3.11.0. Android SDK 36.1.0 and Android Studio JDK 21 are detected. Gradle wrapper 8.14, Android Gradle Plugin 8.11.1, and Kotlin 2.2.20 are configured.
 
-Direct app packages include `cupertino_icons`, `go_router`, `flutter_riverpod`, `firebase_core`, `firebase_auth`, `drift`, `path`, `path_provider`, `flutter_local_notifications` 22.3.2, and `timezone` 0.11.2. `drift_dev` and `build_runner` generate the Drift database code. PDF and usage-statistics packages have not been added. The server-side account gate uses Firebase Functions v2 and Node.js 20.
+Direct app packages include `cupertino_icons`, `go_router`, `flutter_riverpod`, `firebase_core`, `firebase_auth`, `drift`, `path`, `path_provider`, `flutter_local_notifications`, `timezone`, `file_picker`, `csv`, `archive`, `xml`, `crypto`, and `flutter_pdf_text`. `drift_dev` and `build_runner` generate the Drift database code. PDF text extraction and task evidence storage run locally; camera capture, scanned-PDF OCR, PDF reports, JSON backup/restore, and cloud synchronization are not implemented. Android Usage Access is a user-granted special access and is unavailable on other platforms. The server-side account gate uses Firebase Functions v2 and Node.js 20.
 
 Install Flutter and Android Studio/SDK, then from the project root run:
 

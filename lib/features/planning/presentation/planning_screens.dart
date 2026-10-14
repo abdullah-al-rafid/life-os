@@ -1,29 +1,39 @@
 import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/domain/life_record.dart';
 import '../../records/presentation/record_providers.dart';
+import '../../learning/data/local_task_evidence_store.dart';
 import '../../tracking/presentation/tracking_summary_card.dart';
 import '../domain/planning_repository.dart';
 
-class PlanningScreen extends ConsumerWidget {
+class PlanningScreen extends ConsumerStatefulWidget {
   const PlanningScreen({required this.kind, super.key});
   final PlanningKind? kind;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(planningItemsProvider(kind));
+  ConsumerState<PlanningScreen> createState() => _PlanningScreenState();
+}
+
+class _PlanningScreenState extends ConsumerState<PlanningScreen> {
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  Widget build(BuildContext context) {
+    final items = ref.watch(planningItemsProvider(widget.kind));
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('planning_add'),
         onPressed: () => _edit(context, ref),
         icon: const Icon(Icons.add),
-        label: Text(kind == PlanningKind.goal ? 'New goal' : 'New item'),
+        label: Text(widget.kind == PlanningKind.goal ? 'New goal' : 'New item'),
       ),
       body: SafeArea(
         child: Center(
@@ -38,7 +48,7 @@ class PlanningScreen extends ConsumerWidget {
                     AppSpacing.lg,
                     AppSpacing.md,
                   ),
-                  sliver: SliverToBoxAdapter(child: _Header(kind: kind)),
+                  sliver: SliverToBoxAdapter(child: _Header(kind: widget.kind)),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
@@ -46,6 +56,69 @@ class PlanningScreen extends ConsumerWidget {
                   ),
                   sliver: SliverToBoxAdapter(child: const _LocalOnlyBadge()),
                 ),
+                if (widget.kind == null) ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: OutlinedButton.icon(
+                        key: const Key('open_plan_import'),
+                        onPressed: () => context.push('/plan/import'),
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: const Text('Create a 15-day plan from a file'),
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const Key('open_rolling_plan'),
+                            onPressed: () => context.push('/plan/rolling'),
+                            icon: const Icon(Icons.event_repeat_outlined),
+                            label: const Text('Propose next 15-day cycle'),
+                          ),
+                          _PlanDateSelector(
+                            date: _selectedDate,
+                            onPrevious: () => setState(
+                              () => _selectedDate = _selectedDate.subtract(
+                                const Duration(days: 1),
+                              ),
+                            ),
+                            onNext: () => setState(
+                              () => _selectedDate = _selectedDate.add(
+                                const Duration(days: 1),
+                              ),
+                            ),
+                            onChoose: () async {
+                              final selected = await showDatePicker(
+                                context: context,
+                                initialDate: _selectedDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (selected != null && mounted) {
+                                setState(() => _selectedDate = selected);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 items.when(
                   loading: () =>
                       const SliverFillRemaining(child: LoadingStateView()),
@@ -54,16 +127,16 @@ class PlanningScreen extends ConsumerWidget {
                       message:
                           'Your local items could not be loaded. Check the app database and try again.',
                       onRetry: () =>
-                          ref.invalidate(planningItemsProvider(kind)),
+                          ref.invalidate(planningItemsProvider(widget.kind)),
                     ),
                   ),
                   data: (values) {
-                    final visible = kind == null
+                    final visible = widget.kind == null
                         ? values
                               .where(
                                 (i) =>
                                     i.kind != PlanningKind.goal &&
-                                    i.occursOn(DateTime.now()),
+                                    i.occursOn(_selectedDate),
                               )
                               .toList()
                         : values;
@@ -72,13 +145,13 @@ class PlanningScreen extends ConsumerWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.lg),
                           child: EmptyStateView(
-                            icon: kind == PlanningKind.goal
+                            icon: widget.kind == PlanningKind.goal
                                 ? Icons.flag_outlined
                                 : Icons.event_note_outlined,
-                            title: kind == PlanningKind.goal
+                            title: widget.kind == PlanningKind.goal
                                 ? 'No goals yet'
                                 : 'A clear day to begin',
-                            message: kind == PlanningKind.goal
+                            message: widget.kind == PlanningKind.goal
                                 ? 'Add a measurable goal and record progress over time.'
                                 : 'Add a task, routine, or habit. Your records stay on this device.',
                           ),
@@ -114,7 +187,7 @@ class PlanningScreen extends ConsumerWidget {
     WidgetRef ref, [
     PlanningItem? item,
   ]) async {
-    var selectedKind = kind ?? item?.kind;
+    var selectedKind = widget.kind ?? item?.kind;
     if (selectedKind == null) {
       selectedKind = await showDialog<PlanningKind>(
         context: context,
@@ -250,9 +323,46 @@ class PlanningScreen extends ConsumerWidget {
       } else if (action == 'complete') {
         final result = await _completionDialog(context);
         if (result == null) return;
-        await ref
-            .read(planningRepositoryProvider)
-            .complete(item, DateTime.now(), result.$1, notes: result.$2);
+        final identity = ref.read(currentUserIdentityProvider);
+        final uid = identity.currentUid;
+        if (uid == null || uid.isEmpty) {
+          throw const UnauthenticatedOperation();
+        }
+        final evidenceStore = ref.read(localTaskEvidenceStoreProvider);
+        final savedEvidence = <LocalTaskEvidence>[];
+        try {
+          for (final file in result.files) {
+            final bytes = file.bytes;
+            if (bytes == null) {
+              throw const TaskEvidenceFailure(
+                'The selected file could not be read. Try selecting it again.',
+              );
+            }
+            savedEvidence.add(
+              await evidenceStore.save(
+                ownerUid: uid,
+                name: file.name,
+                bytes: bytes,
+              ),
+            );
+          }
+          await ref
+              .read(planningRepositoryProvider)
+              .complete(
+                item,
+                _selectedDate,
+                result.status,
+                notes: result.notes,
+                evidence: savedEvidence
+                    .map((entry) => entry.toJson())
+                    .toList(growable: false),
+              );
+        } on Object {
+          for (final evidence in savedEvidence) {
+            await evidenceStore.delete(ownerUid: uid, key: evidence.key);
+          }
+          rethrow;
+        }
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
@@ -271,6 +381,47 @@ class PlanningScreen extends ConsumerWidget {
       ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
+}
+
+class _PlanDateSelector extends StatelessWidget {
+  const _PlanDateSelector({
+    required this.date,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onChoose,
+  });
+  final DateTime date;
+  final VoidCallback onPrevious, onNext, onChoose;
+
+  @override
+  Widget build(BuildContext context) => SurfaceCard(
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.sm,
+      vertical: AppSpacing.xs,
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          tooltip: 'Previous day',
+          onPressed: onPrevious,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: TextButton.icon(
+            key: const Key('plan_selected_date'),
+            onPressed: onChoose,
+            icon: const Icon(Icons.calendar_month_outlined),
+            label: Text('Plan for ${_todayKey(date)}'),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Next day',
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    ),
+  );
 }
 
 class PlanningInsightsScreen extends ConsumerWidget {
@@ -351,6 +502,72 @@ class PlanningInsightsScreen extends ConsumerWidget {
                             value:
                                 '${recent.where((e) => e.kind == 'goalProgress').length}',
                           ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                items.when(
+                  loading: () => const LoadingStateView(),
+                  error: (_, _) => const ErrorStateView(
+                    message: 'Planned task summary could not be loaded.',
+                  ),
+                  data: (list) {
+                    final today = DateTime.now();
+                    final start = DateTime(today.year, today.month, today.day);
+                    final end = start.add(const Duration(days: 15));
+                    final imported = list
+                        .where((item) {
+                          final date = item.scheduledDate;
+                          if (item.kind != PlanningKind.task ||
+                              item.importId == null ||
+                              date == null) {
+                            return false;
+                          }
+                          final parts = date.split('-').map(int.parse).toList();
+                          final plannedDate = DateTime(
+                            parts[0],
+                            parts[1],
+                            parts[2],
+                          );
+                          return !plannedDate.isBefore(start) &&
+                              plannedDate.isBefore(end);
+                        })
+                        .toList(growable: false);
+                    return SurfaceCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Next 15 days',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          if (imported.isEmpty)
+                            const Text(
+                              'No imported plan tasks are scheduled in the next 15 days.',
+                            ),
+                          if (imported.isNotEmpty) ...[
+                            _MetricLine(
+                              label: 'Imported tasks planned',
+                              value: '${imported.length}',
+                            ),
+                            _MetricLine(
+                              label: 'Estimated workload',
+                              value:
+                                  '${imported.fold<int>(0, (total, item) => total + item.durationMinutes)} min',
+                            ),
+                            for (final item in imported.take(5))
+                              ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(item.title),
+                                subtitle: Text(
+                                  '${item.scheduledDate} · ${item.durationMinutes} min',
+                                ),
+                              ),
+                          ],
                         ],
                       ),
                     );
@@ -556,6 +773,20 @@ class _ItemCard extends ConsumerWidget {
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
+          if (item.completionCriteria.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Complete when: ${item.completionCriteria}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (item.sourceReference.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Source: ${item.sourceReference}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
@@ -618,6 +849,26 @@ class _ItemCard extends ConsumerWidget {
               Text(
                 '${history.length} completion record${history.length == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            for (final entry in history.take(3))
+              Builder(
+                builder: (context) {
+                  try {
+                    final payload =
+                        jsonDecode(entry.payload) as Map<String, dynamic>;
+                    final attachments =
+                        payload['evidence'] as List<dynamic>? ?? const [];
+                    if (attachments.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        'Evidence · ${attachments.map((item) => (item as Map)['name']).join(', ')} · ${entry.localDate}',
+                      ),
+                    );
+                  } on Object {
+                    return const SizedBox.shrink();
+                  }
+                },
               ),
             Align(
               alignment: Alignment.centerRight,
@@ -906,12 +1157,18 @@ class _PlanningFormState extends State<_PlanningForm> {
   );
 }
 
-Future<(CompletionStatus, String)?> _completionDialog(
-  BuildContext context,
-) async {
+class _CompletionDraft {
+  const _CompletionDraft(this.status, this.notes, this.files);
+  final CompletionStatus status;
+  final String notes;
+  final List<PlatformFile> files;
+}
+
+Future<_CompletionDraft?> _completionDialog(BuildContext context) async {
   var status = CompletionStatus.done;
   final notes = TextEditingController();
-  final result = await showDialog<(CompletionStatus, String)>(
+  final files = <PlatformFile>[];
+  final result = await showDialog<_CompletionDraft>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
@@ -947,6 +1204,84 @@ Future<(CompletionStatus, String)?> _completionDialog(
               ),
               maxLines: 2,
             ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              key: const Key('attach_task_evidence'),
+              onPressed: () async {
+                final picked = await FilePicker.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: const [
+                    'jpg',
+                    'jpeg',
+                    'png',
+                    'webp',
+                    'pdf',
+                    'txt',
+                    'docx',
+                  ],
+                  allowMultiple: true,
+                  withData: true,
+                );
+                if (picked == null || !ctx.mounted) return;
+                final valid = picked.files
+                    .where(
+                      (file) =>
+                          file.bytes != null &&
+                          file.bytes!.isNotEmpty &&
+                          file.bytes!.length <= taskEvidenceMaxBytes,
+                    )
+                    .toList();
+                setState(() {
+                  for (final file in valid) {
+                    if (files.length < 5 &&
+                        !files.any(
+                          (existing) =>
+                              existing.name == file.name &&
+                              existing.size == file.size,
+                        )) {
+                      files.add(file);
+                    }
+                  }
+                });
+              },
+              icon: const Icon(Icons.attach_file),
+              label: Text(
+                files.isEmpty
+                    ? 'Attach optional evidence'
+                    : '${files.length} evidence file(s) selected',
+              ),
+            ),
+            if (files.isNotEmpty)
+              for (final file in files)
+                ListTile(
+                  dense: true,
+                  leading:
+                      file.bytes != null &&
+                          const {
+                            'jpg',
+                            'jpeg',
+                            'png',
+                            'webp',
+                          }.contains(file.extension?.toLowerCase())
+                      ? Image.memory(
+                          file.bytes!,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.insert_drive_file_outlined),
+                  title: Text(
+                    file.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text('${(file.size / 1024).ceil()} KB'),
+                  trailing: IconButton(
+                    tooltip: 'Remove ${file.name}',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => files.remove(file)),
+                  ),
+                ),
           ],
         ),
         actions: [
@@ -955,7 +1290,10 @@ Future<(CompletionStatus, String)?> _completionDialog(
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, (status, notes.text)),
+            onPressed: () => Navigator.pop(
+              ctx,
+              _CompletionDraft(status, notes.text, List.unmodifiable(files)),
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -1002,7 +1340,7 @@ Future<double?> _numberDialog(
   return value;
 }
 
-String _todayKey() {
-  final d = DateTime.now();
+String _todayKey([DateTime? date]) {
+  final d = date ?? DateTime.now();
   return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }

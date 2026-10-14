@@ -8,11 +8,14 @@ import '../features/navigation/presentation/app_shell.dart';
 import '../features/navigation/presentation/section_screen.dart';
 import '../features/planning/domain/planning_repository.dart';
 import '../features/planning/presentation/planning_screens.dart';
+import '../features/planning/presentation/task_plan_import_screen.dart';
+import '../features/planning/presentation/rolling_plan_screen.dart';
 import '../features/prayer/presentation/prayer_screen.dart';
 import '../features/prayer/presentation/prayer_reminder_lifecycle.dart';
 import '../features/prayer/presentation/prayer_settings_screen.dart';
 import '../features/fasting/presentation/fasting_screen.dart';
 import '../features/wellness/presentation/wellness_screen.dart';
+import '../features/screen_time/presentation/screen_time_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   late final GoRouter router;
@@ -69,6 +72,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const PlanningScreen(kind: null),
           ),
           GoRoute(
+            path: '/plan/import',
+            name: 'plan-import',
+            builder: (context, state) => const TaskPlanImportScreen(),
+          ),
+          GoRoute(
+            path: '/plan/rolling',
+            name: 'plan-rolling',
+            builder: (context, state) => const RollingPlanScreen(),
+          ),
+          GoRoute(
             path: '/goals',
             name: 'goals',
             builder: (context, state) =>
@@ -98,6 +111,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/wellness',
             name: 'wellness',
             builder: (context, state) => const WellnessScreen(),
+          ),
+          GoRoute(
+            path: '/screen-time',
+            name: 'screen-time',
+            builder: (context, state) => const ScreenTimeScreen(),
           ),
           GoRoute(
             path: '/settings',

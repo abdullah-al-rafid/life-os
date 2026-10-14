@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../../../core/database/life_database.dart';
 import '../../records/domain/life_record.dart';
 import '../../records/domain/life_record_repository.dart';
+import 'task_plan_import.dart';
 
 enum PlanningKind { task, routine, goal, habit }
 
@@ -33,6 +34,10 @@ class PlanningItem {
     required this.createdAtUtc,
     required this.updatedAtUtc,
     required this.revision,
+    this.completionCriteria = '',
+    this.dependencies = const [],
+    this.sourceReference = '',
+    this.importId,
   });
 
   final String id,
@@ -50,6 +55,9 @@ class PlanningItem {
   final List<int> weekdays;
   final bool archived;
   final DateTime createdAtUtc, updatedAtUtc;
+  final String completionCriteria, sourceReference;
+  final List<String> dependencies;
+  final String? importId;
 
   bool occursOn(DateTime date) {
     if (archived) return false;
@@ -85,6 +93,10 @@ class PlanningItem {
     'targetValue': targetValue,
     'targetUnit': targetUnit,
     'archived': archived,
+    'completionCriteria': completionCriteria,
+    'dependencies': dependencies,
+    'sourceReference': sourceReference,
+    'importId': importId,
   };
 
   factory PlanningItem.fromRecord(LifeRecord record) {
@@ -111,6 +123,11 @@ class PlanningItem {
       createdAtUtc: record.createdAtUtc,
       updatedAtUtc: record.updatedAtUtc,
       revision: record.revision,
+      completionCriteria: json['completionCriteria'] as String? ?? '',
+      dependencies: (json['dependencies'] as List<dynamic>? ?? const [])
+          .cast<String>(),
+      sourceReference: json['sourceReference'] as String? ?? '',
+      importId: json['importId'] as String?,
     );
   }
 }
@@ -280,6 +297,10 @@ class PlanningRepository {
     String targetUnit = '',
     RecordVisibility visibility = RecordVisibility.private,
     bool archived = false,
+    String completionCriteria = '',
+    List<String> dependencies = const [],
+    String sourceReference = '',
+    String? importId,
   }) async {
     _validate(
       kind,
@@ -325,6 +346,10 @@ class PlanningRepository {
       createdAtUtc: previous?.createdAtUtc ?? now,
       updatedAtUtc: now,
       revision: previous?.revision ?? 1,
+      completionCriteria: completionCriteria.trim(),
+      dependencies: List.unmodifiable(dependencies),
+      sourceReference: sourceReference.trim(),
+      importId: importId,
     );
     final recordKind = LifeRecordKind.values.byName(kind.name);
     await records.saveRecord(
@@ -340,6 +365,135 @@ class PlanningRepository {
       ),
     );
     return item;
+  }
+
+  Future<List<PlanningItem>> importPlan({
+    required String sourceFingerprint,
+    required DateTime startDate,
+    required List<TaskPlanDraft> tasks,
+  }) async {
+    if (tasks.isEmpty) {
+      throw const PlanningValidationFailure(
+        'Add at least one task before importing.',
+      );
+    }
+    final uid = _uid();
+    await _ensureProfile(uid);
+    final sourceIds = {for (final task in tasks) task.id};
+    if (sourceIds.length != tasks.length) {
+      throw const PlanningValidationFailure(
+        'The preview contains duplicate task IDs.',
+      );
+    }
+    final importedTitles = <String>{};
+    final sourceIndex = {for (var i = 0; i < tasks.length; i++) tasks[i].id: i};
+    for (var taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+      final task = tasks[taskIndex];
+      _validate(
+        PlanningKind.task,
+        task.title,
+        task.priority,
+        task.date,
+        task.scheduledMinute,
+        task.durationMinutes,
+        'once',
+        const [],
+        null,
+        null,
+        '',
+      );
+      if (task.dayOffset < 1 ||
+          task.dayOffset > 15 ||
+          task.dependencies.any(
+            (dependency) => !sourceIds.contains(dependency),
+          ) ||
+          task.date !=
+              _dateKey(startDate.add(Duration(days: task.dayOffset - 1))) ||
+          task.category.trim().isEmpty) {
+        throw const PlanningValidationFailure(
+          'The 15-day preview has an invalid date, category, day, or unresolved dependency.',
+        );
+      }
+      final duplicateKey =
+          '${task.dayOffset}:${task.title.trim().toLowerCase()}';
+      if (!importedTitles.add(duplicateKey)) {
+        throw const PlanningValidationFailure(
+          'The preview contains duplicate tasks on the same day.',
+        );
+      }
+      for (final dependencyId in task.dependencies) {
+        final parentIndex = sourceIndex[dependencyId]!;
+        final parent = tasks[parentIndex];
+        if (parent.dayOffset > task.dayOffset ||
+            (parent.dayOffset == task.dayOffset && parentIndex >= taskIndex)) {
+          throw const PlanningValidationFailure(
+            'A task is scheduled before its prerequisite.',
+          );
+        }
+      }
+    }
+    final idBySourceId = {for (final task in tasks) task.id: _newId()};
+    final now = DateTime.now().toUtc();
+    final items = tasks
+        .map((draft) {
+          final item = PlanningItem(
+            id: idBySourceId[draft.id]!,
+            ownerUid: uid,
+            kind: PlanningKind.task,
+            visibility: draft.visibility,
+            title: draft.title.trim(),
+            description: draft.description.trim(),
+            category: draft.category.trim(),
+            priority: draft.priority,
+            scheduledDate: draft.date,
+            scheduledMinute: draft.scheduledMinute,
+            durationMinutes: draft.durationMinutes,
+            recurrence: 'once',
+            weekdays: const [],
+            targetDate: null,
+            targetValue: null,
+            targetUnit: '',
+            archived: false,
+            createdAtUtc: now,
+            updatedAtUtc: now,
+            revision: 1,
+            completionCriteria: draft.completionCriteria.trim(),
+            dependencies: draft.dependencies
+                .map((id) => idBySourceId[id]!)
+                .toList(growable: false),
+            sourceReference: draft.sourceReference.trim(),
+            importId: sourceFingerprint,
+          );
+          return item;
+        })
+        .toList(growable: false);
+    final recordsToSave = items
+        .map(
+          (item) => LifeRecord(
+            id: item.id,
+            ownerUid: uid,
+            kind: LifeRecordKind.task,
+            visibility: item.visibility,
+            payloadJson: jsonEncode(item.toJson()),
+            createdAtUtc: now,
+            updatedAtUtc: now,
+            revision: 1,
+          ),
+        )
+        .toList(growable: false);
+    await records.saveTaskPlanAtomically(
+      recordsToSave,
+      TaskPlanImportReceipt(
+        id: _newId(),
+        ownerUid: uid,
+        sourceFingerprint: sourceFingerprint,
+        startDate: _dateKey(startDate),
+        parserVersion: taskPlanParserVersion,
+        taskIdsJson: jsonEncode(items.map((item) => item.id).toList()),
+        importedAtUtc: now,
+      ),
+    );
+    return items;
   }
 
   Future<void> delete(String id) =>
@@ -363,6 +517,7 @@ class PlanningRepository {
     DateTime date,
     CompletionStatus status, {
     String notes = '',
+    List<Map<String, Object?>> evidence = const [],
   }) async {
     final uid = _uid();
     await _ensureProfile(uid);
@@ -373,6 +528,38 @@ class PlanningRepository {
       );
     }
     final localDate = _dateKey(date);
+    if (evidence.length > 5 ||
+        evidence.any((attachment) {
+          final key = attachment['key'];
+          final extension = attachment['extension'];
+          final size = attachment['sizeBytes'];
+          return key is! String ||
+              key.isEmpty ||
+              key.contains('/') ||
+              key.contains('\\') ||
+              extension is! String ||
+              !const {
+                'jpg',
+                'jpeg',
+                'png',
+                'webp',
+                'pdf',
+                'txt',
+                'docx',
+              }.contains(extension) ||
+              size is! int ||
+              size < 1 ||
+              size > 10 * 1024 * 1024;
+        })) {
+      throw const PlanningValidationFailure(
+        'One or more evidence attachments are invalid.',
+      );
+    }
+    if (evidence.isNotEmpty && currentItem.kind != PlanningKind.task) {
+      throw const PlanningValidationFailure(
+        'Evidence can only be attached to task completion.',
+      );
+    }
     final occurrence = currentItem.kind == PlanningKind.habit
         ? localDate
         : '$localDate-${currentItem.scheduledMinute}';
@@ -384,11 +571,15 @@ class PlanningRepository {
         kind: '${currentItem.kind.name}Completion',
         occurrenceKey: occurrence,
         localDate: localDate,
-        visibility: currentItem.visibility.name,
+        // Evidence metadata is private even when the task definition is shared.
+        visibility: evidence.isEmpty
+            ? currentItem.visibility.name
+            : RecordVisibility.private.name,
         payloadJson: jsonEncode({
           'status': status.name,
           'notes': notes.trim(),
           'title': currentItem.title,
+          'evidence': evidence,
         }),
         recordedAtUtcMs: DateTime.now().toUtc().millisecondsSinceEpoch,
       ),

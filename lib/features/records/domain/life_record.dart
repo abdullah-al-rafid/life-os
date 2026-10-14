@@ -61,6 +61,33 @@ class LifeRecord {
   final DateTime? deletedAtUtc;
 }
 
+class TaskPlanImportReceipt {
+  const TaskPlanImportReceipt({
+    required this.id,
+    required this.ownerUid,
+    required this.sourceFingerprint,
+    required this.startDate,
+    required this.parserVersion,
+    required this.taskIdsJson,
+    required this.importedAtUtc,
+  });
+
+  final String id;
+  final String ownerUid;
+  final String sourceFingerprint;
+  final String startDate;
+  final String parserVersion;
+  final String taskIdsJson;
+  final DateTime importedAtUtc;
+}
+
+class DuplicateTaskPlanImport implements Exception {
+  const DuplicateTaskPlanImport();
+
+  @override
+  String toString() => 'This file and start date have already been imported.';
+}
+
 class OwnershipViolation implements Exception {
   const OwnershipViolation();
 

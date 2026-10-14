@@ -78,8 +78,34 @@ class TrackingEntries extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Durable receipt for an explicitly approved local task-plan import.
+/// Unique per account, file fingerprint, start date, and parser version.
+class TaskPlanImports extends Table {
+  TextColumn get id => text()();
+  TextColumn get ownerUid => text().references(Profiles, #authUid)();
+  TextColumn get sourceFingerprint => text()();
+  TextColumn get startDate => text()();
+  TextColumn get parserVersion => text()();
+  TextColumn get taskIdsJson => text()();
+  IntColumn get importedAtUtcMs => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {ownerUid, sourceFingerprint, startDate, parserVersion},
+  ];
+}
+
 @DriftDatabase(
-  tables: [Profiles, StoredRecords, ActivityHistory, TrackingEntries],
+  tables: [
+    Profiles,
+    StoredRecords,
+    ActivityHistory,
+    TrackingEntries,
+    TaskPlanImports,
+  ],
 )
 class LifeDatabase extends _$LifeDatabase {
   LifeDatabase() : super(_openConnection());
@@ -87,7 +113,7 @@ class LifeDatabase extends _$LifeDatabase {
   LifeDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -105,6 +131,9 @@ class LifeDatabase extends _$LifeDatabase {
       if (from < 4) {
         await m.createTable(trackingEntries);
         await _createTrackingEntryIndexes();
+      }
+      if (from < 5) {
+        await m.createTable(taskPlanImports);
       }
     },
     beforeOpen: (details) async {

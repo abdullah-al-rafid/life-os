@@ -8,9 +8,11 @@ import '../data/firebase_current_user_identity.dart';
 import '../data/drift_life_record_store.dart';
 import '../domain/life_record_repository.dart';
 import '../../planning/domain/planning_repository.dart';
+import '../../planning/domain/task_plan_import.dart';
 import '../../tracking/data/drift_tracking_entry_store.dart';
 import '../../tracking/domain/tracking_entry.dart';
 import '../../tracking/domain/tracking_entry_repository.dart';
+import '../../learning/data/local_task_evidence_store.dart';
 
 final lifeDatabaseFactoryProvider = Provider<LifeDatabase Function()>(
   (ref) => LifeDatabase.new,
@@ -36,6 +38,14 @@ final planningRepositoryProvider = Provider<PlanningRepository>((ref) {
     identity,
   );
 });
+
+final taskPlanImporterProvider = Provider<TaskPlanImporter>(
+  (ref) => TaskPlanImporter(),
+);
+
+final localTaskEvidenceStoreProvider = Provider<LocalTaskEvidenceStore>(
+  (ref) => LocalTaskEvidenceStore(),
+);
 
 final planningItemsProvider = StreamProvider.autoDispose
     .family<List<PlanningItem>, PlanningKind?>(

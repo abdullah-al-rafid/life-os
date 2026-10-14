@@ -2405,6 +2405,498 @@ class TrackingEntriesCompanion extends UpdateCompanion<TrackingEntryRow> {
   }
 }
 
+class $TaskPlanImportsTable extends TaskPlanImports
+    with TableInfo<$TaskPlanImportsTable, TaskPlanImport> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TaskPlanImportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerUidMeta = const VerificationMeta(
+    'ownerUid',
+  );
+  @override
+  late final GeneratedColumn<String> ownerUid = GeneratedColumn<String>(
+    'owner_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (auth_uid)',
+    ),
+  );
+  static const VerificationMeta _sourceFingerprintMeta = const VerificationMeta(
+    'sourceFingerprint',
+  );
+  @override
+  late final GeneratedColumn<String> sourceFingerprint =
+      GeneratedColumn<String>(
+        'source_fingerprint',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<String> startDate = GeneratedColumn<String>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _parserVersionMeta = const VerificationMeta(
+    'parserVersion',
+  );
+  @override
+  late final GeneratedColumn<String> parserVersion = GeneratedColumn<String>(
+    'parser_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _taskIdsJsonMeta = const VerificationMeta(
+    'taskIdsJson',
+  );
+  @override
+  late final GeneratedColumn<String> taskIdsJson = GeneratedColumn<String>(
+    'task_ids_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _importedAtUtcMsMeta = const VerificationMeta(
+    'importedAtUtcMs',
+  );
+  @override
+  late final GeneratedColumn<int> importedAtUtcMs = GeneratedColumn<int>(
+    'imported_at_utc_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ownerUid,
+    sourceFingerprint,
+    startDate,
+    parserVersion,
+    taskIdsJson,
+    importedAtUtcMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'task_plan_imports';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TaskPlanImport> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('owner_uid')) {
+      context.handle(
+        _ownerUidMeta,
+        ownerUid.isAcceptableOrUnknown(data['owner_uid']!, _ownerUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUidMeta);
+    }
+    if (data.containsKey('source_fingerprint')) {
+      context.handle(
+        _sourceFingerprintMeta,
+        sourceFingerprint.isAcceptableOrUnknown(
+          data['source_fingerprint']!,
+          _sourceFingerprintMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceFingerprintMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('parser_version')) {
+      context.handle(
+        _parserVersionMeta,
+        parserVersion.isAcceptableOrUnknown(
+          data['parser_version']!,
+          _parserVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_parserVersionMeta);
+    }
+    if (data.containsKey('task_ids_json')) {
+      context.handle(
+        _taskIdsJsonMeta,
+        taskIdsJson.isAcceptableOrUnknown(
+          data['task_ids_json']!,
+          _taskIdsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_taskIdsJsonMeta);
+    }
+    if (data.containsKey('imported_at_utc_ms')) {
+      context.handle(
+        _importedAtUtcMsMeta,
+        importedAtUtcMs.isAcceptableOrUnknown(
+          data['imported_at_utc_ms']!,
+          _importedAtUtcMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_importedAtUtcMsMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {ownerUid, sourceFingerprint, startDate, parserVersion},
+  ];
+  @override
+  TaskPlanImport map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TaskPlanImport(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      ownerUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_uid'],
+      )!,
+      sourceFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_fingerprint'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}start_date'],
+      )!,
+      parserVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parser_version'],
+      )!,
+      taskIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}task_ids_json'],
+      )!,
+      importedAtUtcMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}imported_at_utc_ms'],
+      )!,
+    );
+  }
+
+  @override
+  $TaskPlanImportsTable createAlias(String alias) {
+    return $TaskPlanImportsTable(attachedDatabase, alias);
+  }
+}
+
+class TaskPlanImport extends DataClass implements Insertable<TaskPlanImport> {
+  final String id;
+  final String ownerUid;
+  final String sourceFingerprint;
+  final String startDate;
+  final String parserVersion;
+  final String taskIdsJson;
+  final int importedAtUtcMs;
+  const TaskPlanImport({
+    required this.id,
+    required this.ownerUid,
+    required this.sourceFingerprint,
+    required this.startDate,
+    required this.parserVersion,
+    required this.taskIdsJson,
+    required this.importedAtUtcMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['owner_uid'] = Variable<String>(ownerUid);
+    map['source_fingerprint'] = Variable<String>(sourceFingerprint);
+    map['start_date'] = Variable<String>(startDate);
+    map['parser_version'] = Variable<String>(parserVersion);
+    map['task_ids_json'] = Variable<String>(taskIdsJson);
+    map['imported_at_utc_ms'] = Variable<int>(importedAtUtcMs);
+    return map;
+  }
+
+  TaskPlanImportsCompanion toCompanion(bool nullToAbsent) {
+    return TaskPlanImportsCompanion(
+      id: Value(id),
+      ownerUid: Value(ownerUid),
+      sourceFingerprint: Value(sourceFingerprint),
+      startDate: Value(startDate),
+      parserVersion: Value(parserVersion),
+      taskIdsJson: Value(taskIdsJson),
+      importedAtUtcMs: Value(importedAtUtcMs),
+    );
+  }
+
+  factory TaskPlanImport.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TaskPlanImport(
+      id: serializer.fromJson<String>(json['id']),
+      ownerUid: serializer.fromJson<String>(json['ownerUid']),
+      sourceFingerprint: serializer.fromJson<String>(json['sourceFingerprint']),
+      startDate: serializer.fromJson<String>(json['startDate']),
+      parserVersion: serializer.fromJson<String>(json['parserVersion']),
+      taskIdsJson: serializer.fromJson<String>(json['taskIdsJson']),
+      importedAtUtcMs: serializer.fromJson<int>(json['importedAtUtcMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'ownerUid': serializer.toJson<String>(ownerUid),
+      'sourceFingerprint': serializer.toJson<String>(sourceFingerprint),
+      'startDate': serializer.toJson<String>(startDate),
+      'parserVersion': serializer.toJson<String>(parserVersion),
+      'taskIdsJson': serializer.toJson<String>(taskIdsJson),
+      'importedAtUtcMs': serializer.toJson<int>(importedAtUtcMs),
+    };
+  }
+
+  TaskPlanImport copyWith({
+    String? id,
+    String? ownerUid,
+    String? sourceFingerprint,
+    String? startDate,
+    String? parserVersion,
+    String? taskIdsJson,
+    int? importedAtUtcMs,
+  }) => TaskPlanImport(
+    id: id ?? this.id,
+    ownerUid: ownerUid ?? this.ownerUid,
+    sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+    startDate: startDate ?? this.startDate,
+    parserVersion: parserVersion ?? this.parserVersion,
+    taskIdsJson: taskIdsJson ?? this.taskIdsJson,
+    importedAtUtcMs: importedAtUtcMs ?? this.importedAtUtcMs,
+  );
+  TaskPlanImport copyWithCompanion(TaskPlanImportsCompanion data) {
+    return TaskPlanImport(
+      id: data.id.present ? data.id.value : this.id,
+      ownerUid: data.ownerUid.present ? data.ownerUid.value : this.ownerUid,
+      sourceFingerprint: data.sourceFingerprint.present
+          ? data.sourceFingerprint.value
+          : this.sourceFingerprint,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      parserVersion: data.parserVersion.present
+          ? data.parserVersion.value
+          : this.parserVersion,
+      taskIdsJson: data.taskIdsJson.present
+          ? data.taskIdsJson.value
+          : this.taskIdsJson,
+      importedAtUtcMs: data.importedAtUtcMs.present
+          ? data.importedAtUtcMs.value
+          : this.importedAtUtcMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TaskPlanImport(')
+          ..write('id: $id, ')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('startDate: $startDate, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('taskIdsJson: $taskIdsJson, ')
+          ..write('importedAtUtcMs: $importedAtUtcMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    ownerUid,
+    sourceFingerprint,
+    startDate,
+    parserVersion,
+    taskIdsJson,
+    importedAtUtcMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TaskPlanImport &&
+          other.id == this.id &&
+          other.ownerUid == this.ownerUid &&
+          other.sourceFingerprint == this.sourceFingerprint &&
+          other.startDate == this.startDate &&
+          other.parserVersion == this.parserVersion &&
+          other.taskIdsJson == this.taskIdsJson &&
+          other.importedAtUtcMs == this.importedAtUtcMs);
+}
+
+class TaskPlanImportsCompanion extends UpdateCompanion<TaskPlanImport> {
+  final Value<String> id;
+  final Value<String> ownerUid;
+  final Value<String> sourceFingerprint;
+  final Value<String> startDate;
+  final Value<String> parserVersion;
+  final Value<String> taskIdsJson;
+  final Value<int> importedAtUtcMs;
+  final Value<int> rowid;
+  const TaskPlanImportsCompanion({
+    this.id = const Value.absent(),
+    this.ownerUid = const Value.absent(),
+    this.sourceFingerprint = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.parserVersion = const Value.absent(),
+    this.taskIdsJson = const Value.absent(),
+    this.importedAtUtcMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TaskPlanImportsCompanion.insert({
+    required String id,
+    required String ownerUid,
+    required String sourceFingerprint,
+    required String startDate,
+    required String parserVersion,
+    required String taskIdsJson,
+    required int importedAtUtcMs,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       ownerUid = Value(ownerUid),
+       sourceFingerprint = Value(sourceFingerprint),
+       startDate = Value(startDate),
+       parserVersion = Value(parserVersion),
+       taskIdsJson = Value(taskIdsJson),
+       importedAtUtcMs = Value(importedAtUtcMs);
+  static Insertable<TaskPlanImport> custom({
+    Expression<String>? id,
+    Expression<String>? ownerUid,
+    Expression<String>? sourceFingerprint,
+    Expression<String>? startDate,
+    Expression<String>? parserVersion,
+    Expression<String>? taskIdsJson,
+    Expression<int>? importedAtUtcMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerUid != null) 'owner_uid': ownerUid,
+      if (sourceFingerprint != null) 'source_fingerprint': sourceFingerprint,
+      if (startDate != null) 'start_date': startDate,
+      if (parserVersion != null) 'parser_version': parserVersion,
+      if (taskIdsJson != null) 'task_ids_json': taskIdsJson,
+      if (importedAtUtcMs != null) 'imported_at_utc_ms': importedAtUtcMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TaskPlanImportsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? ownerUid,
+    Value<String>? sourceFingerprint,
+    Value<String>? startDate,
+    Value<String>? parserVersion,
+    Value<String>? taskIdsJson,
+    Value<int>? importedAtUtcMs,
+    Value<int>? rowid,
+  }) {
+    return TaskPlanImportsCompanion(
+      id: id ?? this.id,
+      ownerUid: ownerUid ?? this.ownerUid,
+      sourceFingerprint: sourceFingerprint ?? this.sourceFingerprint,
+      startDate: startDate ?? this.startDate,
+      parserVersion: parserVersion ?? this.parserVersion,
+      taskIdsJson: taskIdsJson ?? this.taskIdsJson,
+      importedAtUtcMs: importedAtUtcMs ?? this.importedAtUtcMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (ownerUid.present) {
+      map['owner_uid'] = Variable<String>(ownerUid.value);
+    }
+    if (sourceFingerprint.present) {
+      map['source_fingerprint'] = Variable<String>(sourceFingerprint.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<String>(startDate.value);
+    }
+    if (parserVersion.present) {
+      map['parser_version'] = Variable<String>(parserVersion.value);
+    }
+    if (taskIdsJson.present) {
+      map['task_ids_json'] = Variable<String>(taskIdsJson.value);
+    }
+    if (importedAtUtcMs.present) {
+      map['imported_at_utc_ms'] = Variable<int>(importedAtUtcMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TaskPlanImportsCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('sourceFingerprint: $sourceFingerprint, ')
+          ..write('startDate: $startDate, ')
+          ..write('parserVersion: $parserVersion, ')
+          ..write('taskIdsJson: $taskIdsJson, ')
+          ..write('importedAtUtcMs: $importedAtUtcMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LifeDatabase extends GeneratedDatabase {
   _$LifeDatabase(QueryExecutor e) : super(e);
   $LifeDatabaseManager get managers => $LifeDatabaseManager(this);
@@ -2416,6 +2908,9 @@ abstract class _$LifeDatabase extends GeneratedDatabase {
   late final $TrackingEntriesTable trackingEntries = $TrackingEntriesTable(
     this,
   );
+  late final $TaskPlanImportsTable taskPlanImports = $TaskPlanImportsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2425,6 +2920,7 @@ abstract class _$LifeDatabase extends GeneratedDatabase {
     storedRecords,
     activityHistory,
     trackingEntries,
+    taskPlanImports,
   ];
 }
 
@@ -2504,6 +3000,27 @@ final class $$ProfilesTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _trackingEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TaskPlanImportsTable, List<TaskPlanImport>>
+  _taskPlanImportsRefsTable(_$LifeDatabase db) => MultiTypedResultKey.fromTable(
+    db.taskPlanImports,
+    aliasName: 'profiles__auth_uid__task_plan_imports__owner_uid',
+  );
+
+  $$TaskPlanImportsTableProcessedTableManager get taskPlanImportsRefs {
+    final manager =
+        $$TaskPlanImportsTableTableManager($_db, $_db.taskPlanImports).filter(
+          (f) =>
+              f.ownerUid.authUid.sqlEquals($_itemColumn<String>('auth_uid')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _taskPlanImportsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -2606,6 +3123,31 @@ class $$ProfilesTableFilterComposer
           }) => $$TrackingEntriesTableFilterComposer(
             $db: $db,
             $table: $db.trackingEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> taskPlanImportsRefs(
+    Expression<bool> Function($$TaskPlanImportsTableFilterComposer f) f,
+  ) {
+    final $$TaskPlanImportsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.authUid,
+      referencedTable: $db.taskPlanImports,
+      getReferencedColumn: (t) => t.ownerUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TaskPlanImportsTableFilterComposer(
+            $db: $db,
+            $table: $db.taskPlanImports,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2747,6 +3289,31 @@ class $$ProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> taskPlanImportsRefs<T extends Object>(
+    Expression<T> Function($$TaskPlanImportsTableAnnotationComposer a) f,
+  ) {
+    final $$TaskPlanImportsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.authUid,
+      referencedTable: $db.taskPlanImports,
+      getReferencedColumn: (t) => t.ownerUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TaskPlanImportsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.taskPlanImports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -2766,6 +3333,7 @@ class $$ProfilesTableTableManager
             bool storedRecordsRefs,
             bool activityHistoryRefs,
             bool trackingEntriesRefs,
+            bool taskPlanImportsRefs,
           })
         > {
   $$ProfilesTableTableManager(_$LifeDatabase db, $ProfilesTable table)
@@ -2820,6 +3388,7 @@ class $$ProfilesTableTableManager
                 storedRecordsRefs = false,
                 activityHistoryRefs = false,
                 trackingEntriesRefs = false,
+                taskPlanImportsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -2827,6 +3396,7 @@ class $$ProfilesTableTableManager
                     if (storedRecordsRefs) db.storedRecords,
                     if (activityHistoryRefs) db.activityHistory,
                     if (trackingEntriesRefs) db.trackingEntries,
+                    if (taskPlanImportsRefs) db.taskPlanImports,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -2894,6 +3464,27 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (taskPlanImportsRefs)
+                        await $_getPrefetchedData<
+                          Profile,
+                          $ProfilesTable,
+                          TaskPlanImport
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._taskPlanImportsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).taskPlanImportsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.ownerUid == item.authUid,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -2918,6 +3509,7 @@ typedef $$ProfilesTableProcessedTableManager =
         bool storedRecordsRefs,
         bool activityHistoryRefs,
         bool trackingEntriesRefs,
+        bool taskPlanImportsRefs,
       })
     >;
 typedef $$StoredRecordsTableCreateCompanionBuilder =
@@ -4281,6 +4873,378 @@ typedef $$TrackingEntriesTableProcessedTableManager =
       TrackingEntryRow,
       PrefetchHooks Function({bool ownerUid})
     >;
+typedef $$TaskPlanImportsTableCreateCompanionBuilder =
+    TaskPlanImportsCompanion Function({
+      required String id,
+      required String ownerUid,
+      required String sourceFingerprint,
+      required String startDate,
+      required String parserVersion,
+      required String taskIdsJson,
+      required int importedAtUtcMs,
+      Value<int> rowid,
+    });
+typedef $$TaskPlanImportsTableUpdateCompanionBuilder =
+    TaskPlanImportsCompanion Function({
+      Value<String> id,
+      Value<String> ownerUid,
+      Value<String> sourceFingerprint,
+      Value<String> startDate,
+      Value<String> parserVersion,
+      Value<String> taskIdsJson,
+      Value<int> importedAtUtcMs,
+      Value<int> rowid,
+    });
+
+final class $$TaskPlanImportsTableReferences
+    extends
+        BaseReferences<_$LifeDatabase, $TaskPlanImportsTable, TaskPlanImport> {
+  $$TaskPlanImportsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _ownerUidTable(_$LifeDatabase db) => db.profiles
+      .createAlias('task_plan_imports__owner_uid__profiles__auth_uid');
+
+  $$ProfilesTableProcessedTableManager get ownerUid {
+    final $_column = $_itemColumn<String>('owner_uid')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.authUid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_ownerUidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TaskPlanImportsTableFilterComposer
+    extends Composer<_$LifeDatabase, $TaskPlanImportsTable> {
+  $$TaskPlanImportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taskIdsJson => $composableBuilder(
+    column: $table.taskIdsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get importedAtUtcMs => $composableBuilder(
+    column: $table.importedAtUtcMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get ownerUid {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TaskPlanImportsTableOrderingComposer
+    extends Composer<_$LifeDatabase, $TaskPlanImportsTable> {
+  $$TaskPlanImportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taskIdsJson => $composableBuilder(
+    column: $table.taskIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get importedAtUtcMs => $composableBuilder(
+    column: $table.importedAtUtcMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get ownerUid {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TaskPlanImportsTableAnnotationComposer
+    extends Composer<_$LifeDatabase, $TaskPlanImportsTable> {
+  $$TaskPlanImportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceFingerprint => $composableBuilder(
+    column: $table.sourceFingerprint,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<String> get parserVersion => $composableBuilder(
+    column: $table.parserVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get taskIdsJson => $composableBuilder(
+    column: $table.taskIdsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get importedAtUtcMs => $composableBuilder(
+    column: $table.importedAtUtcMs,
+    builder: (column) => column,
+  );
+
+  $$ProfilesTableAnnotationComposer get ownerUid {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TaskPlanImportsTableTableManager
+    extends
+        RootTableManager<
+          _$LifeDatabase,
+          $TaskPlanImportsTable,
+          TaskPlanImport,
+          $$TaskPlanImportsTableFilterComposer,
+          $$TaskPlanImportsTableOrderingComposer,
+          $$TaskPlanImportsTableAnnotationComposer,
+          $$TaskPlanImportsTableCreateCompanionBuilder,
+          $$TaskPlanImportsTableUpdateCompanionBuilder,
+          (TaskPlanImport, $$TaskPlanImportsTableReferences),
+          TaskPlanImport,
+          PrefetchHooks Function({bool ownerUid})
+        > {
+  $$TaskPlanImportsTableTableManager(
+    _$LifeDatabase db,
+    $TaskPlanImportsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TaskPlanImportsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TaskPlanImportsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TaskPlanImportsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> ownerUid = const Value.absent(),
+                Value<String> sourceFingerprint = const Value.absent(),
+                Value<String> startDate = const Value.absent(),
+                Value<String> parserVersion = const Value.absent(),
+                Value<String> taskIdsJson = const Value.absent(),
+                Value<int> importedAtUtcMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TaskPlanImportsCompanion(
+                id: id,
+                ownerUid: ownerUid,
+                sourceFingerprint: sourceFingerprint,
+                startDate: startDate,
+                parserVersion: parserVersion,
+                taskIdsJson: taskIdsJson,
+                importedAtUtcMs: importedAtUtcMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String ownerUid,
+                required String sourceFingerprint,
+                required String startDate,
+                required String parserVersion,
+                required String taskIdsJson,
+                required int importedAtUtcMs,
+                Value<int> rowid = const Value.absent(),
+              }) => TaskPlanImportsCompanion.insert(
+                id: id,
+                ownerUid: ownerUid,
+                sourceFingerprint: sourceFingerprint,
+                startDate: startDate,
+                parserVersion: parserVersion,
+                taskIdsJson: taskIdsJson,
+                importedAtUtcMs: importedAtUtcMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TaskPlanImportsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({ownerUid = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (ownerUid) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.ownerUid,
+                                referencedTable:
+                                    $$TaskPlanImportsTableReferences
+                                        ._ownerUidTable(db),
+                                referencedColumn:
+                                    $$TaskPlanImportsTableReferences
+                                        ._ownerUidTable(db)
+                                        .authUid,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TaskPlanImportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LifeDatabase,
+      $TaskPlanImportsTable,
+      TaskPlanImport,
+      $$TaskPlanImportsTableFilterComposer,
+      $$TaskPlanImportsTableOrderingComposer,
+      $$TaskPlanImportsTableAnnotationComposer,
+      $$TaskPlanImportsTableCreateCompanionBuilder,
+      $$TaskPlanImportsTableUpdateCompanionBuilder,
+      (TaskPlanImport, $$TaskPlanImportsTableReferences),
+      TaskPlanImport,
+      PrefetchHooks Function({bool ownerUid})
+    >;
 
 class $LifeDatabaseManager {
   final _$LifeDatabase _db;
@@ -4293,4 +5257,6 @@ class $LifeDatabaseManager {
       $$ActivityHistoryTableTableManager(_db, _db.activityHistory);
   $$TrackingEntriesTableTableManager get trackingEntries =>
       $$TrackingEntriesTableTableManager(_db, _db.trackingEntries);
+  $$TaskPlanImportsTableTableManager get taskPlanImports =>
+      $$TaskPlanImportsTableTableManager(_db, _db.taskPlanImports);
 }

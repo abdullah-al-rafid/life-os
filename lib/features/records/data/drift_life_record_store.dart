@@ -131,6 +131,73 @@ class DriftLifeRecordStore implements LifeRecordLocalStore {
   }
 
   @override
+  Future<void> saveTaskPlanAtomically(
+    List<LifeRecord> records,
+    TaskPlanImportReceipt receipt,
+    String actorUid,
+  ) async {
+    _requireUid(actorUid);
+    if (receipt.ownerUid != actorUid ||
+        records.any((r) => r.ownerUid != actorUid)) {
+      throw const OwnershipViolation();
+    }
+    if (receipt.id.trim().isEmpty ||
+        receipt.sourceFingerprint.trim().isEmpty ||
+        receipt.parserVersion.trim().isEmpty ||
+        receipt.startDate.trim().isEmpty) {
+      throw const RecordValidationFailure(
+        'Task-plan import receipt is invalid.',
+      );
+    }
+    final taskIds = records.map((r) => r.id).toList();
+    if (taskIds.toSet().length != taskIds.length) {
+      throw const RecordValidationFailure('An imported task ID is duplicated.');
+    }
+    await _database.transaction(() async {
+      final existingReceipt =
+          await (_database.select(_database.taskPlanImports)..where(
+                (row) =>
+                    row.ownerUid.equals(actorUid) &
+                    row.sourceFingerprint.equals(receipt.sourceFingerprint) &
+                    row.startDate.equals(receipt.startDate) &
+                    row.parserVersion.equals(receipt.parserVersion),
+              ))
+              .getSingleOrNull();
+      if (existingReceipt != null) throw const DuplicateTaskPlanImport();
+      for (final record in records) {
+        validateLifeRecord(record, localMutation: true);
+        if (record.kind != LifeRecordKind.task || record.revision != 1) {
+          throw const RecordValidationFailure(
+            'Imported tasks must be new task records.',
+          );
+        }
+        final existing = await (_database.select(
+          _database.storedRecords,
+        )..where((row) => row.id.equals(record.id))).getSingleOrNull();
+        if (existing != null) throw const StaleRecordRevision();
+        await _database
+            .into(_database.storedRecords)
+            .insert(_toCompanion(record));
+      }
+      await _database
+          .into(_database.taskPlanImports)
+          .insert(
+            TaskPlanImportsCompanion.insert(
+              id: receipt.id,
+              ownerUid: receipt.ownerUid,
+              sourceFingerprint: receipt.sourceFingerprint,
+              startDate: receipt.startDate,
+              parserVersion: receipt.parserVersion,
+              taskIdsJson: receipt.taskIdsJson,
+              importedAtUtcMs: receipt.importedAtUtc
+                  .toUtc()
+                  .millisecondsSinceEpoch,
+            ),
+          );
+    });
+  }
+
+  @override
   Future<void> softDeleteOwnedRecord(
     String id,
     String actorUid,

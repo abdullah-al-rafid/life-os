@@ -12,6 +12,11 @@ abstract interface class LifeRecordLocalStore {
   Future<ProfileRecord?> findProfile(String authUid);
   Future<LifeRecord?> findVisibleRecord(String id, String viewerUid);
   Future<LifeRecord> saveOwnedRecord(LifeRecord record, String actorUid);
+  Future<void> saveTaskPlanAtomically(
+    List<LifeRecord> records,
+    TaskPlanImportReceipt receipt,
+    String actorUid,
+  );
   Future<void> softDeleteOwnedRecord(
     String id,
     String actorUid,
@@ -31,6 +36,10 @@ abstract interface class LifeRecordRepository {
   Future<ProfileRecord?> findCurrentProfile();
   Future<LifeRecord?> findCurrentVisibleRecord(String id);
   Future<LifeRecord> saveRecord(LifeRecord record);
+  Future<void> saveTaskPlanAtomically(
+    List<LifeRecord> records,
+    TaskPlanImportReceipt receipt,
+  );
   Future<void> deleteRecord(String id, DateTime atUtc);
   Stream<List<LifeRecord>> watchVisibleRecords();
   Future<void> synchronize();
@@ -77,6 +86,32 @@ class OfflineLifeRecordRepository implements LifeRecordRepository {
     validateLifeRecord(record, localMutation: true);
     if (record.ownerUid != uid) throw const OwnershipViolation();
     return _localStore.saveOwnedRecord(record, uid);
+  }
+
+  @override
+  Future<void> saveTaskPlanAtomically(
+    List<LifeRecord> records,
+    TaskPlanImportReceipt receipt,
+  ) {
+    final uid = _requireCurrentUid();
+    if (receipt.ownerUid != uid ||
+        records.any((record) => record.ownerUid != uid)) {
+      throw const OwnershipViolation();
+    }
+    if (records.isEmpty) {
+      throw const RecordValidationFailure(
+        'An imported plan must contain tasks.',
+      );
+    }
+    for (final record in records) {
+      validateLifeRecord(record, localMutation: true);
+      if (record.kind != LifeRecordKind.task) {
+        throw const RecordValidationFailure(
+          'Imported plan records must be tasks.',
+        );
+      }
+    }
+    return _localStore.saveTaskPlanAtomically(records, receipt, uid);
   }
 
   @override

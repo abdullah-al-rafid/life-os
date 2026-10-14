@@ -10,7 +10,12 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 3 (offline data architecture): Local foundation implemented; remote synchronization remains disabled.
 - Phase 4 (routines, tasks, goals, habits): Implemented with local-only persistence and tests.
 - Phase 5: Local data foundation, prayer tracking and notifications, fasting, sleep, workouts, and Home/Insights integration implemented; this milestone awaits review. Device-level notification checks remain.
-- Phases 6 and later: Not started.
+- Phase 6 (secure cloud sync): Planning is documented; no Firestore rules, adapter, or remote writes are implemented.
+- Phase 7 (File-to-15-Day Task Planner): Local implementation is present; final verification is in progress.
+- Phase 8 (Learning and Private Evidence): local task-completion attachments are implemented as a limited first slice; full learning-session workflows and camera capture remain incomplete.
+- Phase 9 (Android Screen Time): local Usage Access query and date-filter UI are implemented; device verification remains.
+- Phase 11 (Reports/Export): Not implemented.
+- Phase 12 (Adaptive Planning): approval-only carryover proposal implemented as a partial slice; full adaptive analysis remains incomplete.
 
 ## Completed
 
@@ -40,7 +45,28 @@ Updated: 2026-10-14 (Asia/Dhaka)
 
 ## In progress
 
-- Remote synchronization planning only. No Firestore reads or writes are implemented.
+- Phase 6 secure cloud sync remains planning only. No Firestore reads or writes are implemented.
+- Remaining-feature work: approval-only rolling carryover proposals, local task evidence, and Android Usage Access query/UI have partial implementations. Reports/export remain unimplemented; secure cloud sync remains blocked as noted below.
+
+### Rolling plan proposal slice (partial)
+
+- Added an approval-only proposal screen that compares completed versus incomplete tasks from prior imported task plans, carries forward unfinished tasks into the next 15 local dates, balances estimated minutes across days, and warns when a day exceeds the selected capacity.
+- The user can change the daily capacity, edit proposed titles, regenerate, and explicitly approve. Approval uses the existing UID-bound atomic task-plan import and receipt table; a stable per-user/per-cycle fingerprint prevents duplicate imports. Existing definitions and append-only history are left unchanged.
+- The Home dashboard lists overdue one-time tasks first and displays each task's priority and estimated minutes.
+- This is not the complete adaptive planner: it does not yet analyze goal progress, deadlines, all routine commitments, or completion-rate trends; it does not expose full field editing or compare all previous plan versions. It carries forward tasks from prior imported plans only. No automatic activation or historical rewrite occurs.
+
+### Learning evidence and Android Screen Time (partial)
+
+- Task completion accepts up to five optional local evidence files from the gallery/file picker: JPEG, PNG, WebP, PDF, TXT, and DOCX, up to 10 MB each. Extensions and basic file signatures/text encoding are checked. Bytes are stored in the app-private support directory under the active Auth UID. Completion history keeps relative keys, names, sizes, and timestamps; evidence-bearing events are private even if their task is shared. A failed history write removes files written by that attempt.
+- Selected image previews are shown before saving, and attachment names appear in local completion history. Evidence is not uploaded; Android cloud/device backup extraction rules exclude the evidence directory. Direct camera capture, history-time file preview, explicit evidence retention UI, and evidence cleanup after task deletion are not implemented. Local evidence and the SQLite DB are not encrypted; the database backup policy remains unresolved.
+- Android Screen Time uses a native `UsageStatsManager` bridge. It explains the special Usage Access setting, opens Android settings, checks authorization before querying, refreshes on resume, and groups foreground time by app for a chosen local date. Denied access and empty/unavailable data are shown distinctly. It is Android-only and has not been manually verified on a device/emulator. Usage summaries are queried on demand, not persisted.
+
+### Remaining required features and blockers
+
+- Learning sessions are not implemented. Evidence attachment support is limited to task completion and has no camera capture or history preview. No evidence is uploaded.
+- Reports, PDF export, and validated JSON export/import are not implemented.
+- Android Screen Time code is implemented, but Usage Access has not been granted or tested on device; no real usage output is claimed.
+- Secure Cloud Sync remains disabled. The approved plan requires trusted administrator-verified UIDs, default-deny Firestore Rules and emulator tests before any remote writes. Those project identifiers/rules are not available in this workspace; no allowlist, rules, adapter, billing, or deployment has been invented or enabled.
 
 ## Completed implementation details
 
@@ -54,7 +80,7 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Connected Home, Plan, Goals, and Insights to live local database streams. Added validation, loading/empty/error states, and a visible local-only/offline indicator. No feature writes to Firebase or another remote service.
 - Added repository tests for validation, recurrence, completion snapshots, duplicate habit check-ins, goal history, account switching, shared/private history, and user isolation; added widget input/save coverage and v1/v2 migration coverage.
 - Limits: recurrence supports one-time, daily, weekdays, and selected weekly days; no flexible interval/monthly rules or notification scheduling. Dates use the device's local calendar date and scheduled wall-clock minute; travel/timezone-change policy remains undecided. Deletion is a local tombstone and never erases history. Archived definitions are hidden from active lists and are not yet restorable from an archive view.
-- Prayer, fasting, learning evidence, Screen Time, PDF export, AI planning, cloud sync, and server-enforced allowlisting remain unimplemented.
+- Prayer and fasting are implemented in Phase 5. Learning-session workflows, full evidence management, complete Screen Time verification, PDF/JSON reports, AI planning, cloud sync, and server-enforced allowlisting remain incomplete.
 
 ### Phase 5 first milestone: local tracking data foundation
 
@@ -64,6 +90,14 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Preserved existing Phase 2/3/4 structures and behavior. Migrations from v1, v2, and v3 now reach v4 sequentially; the v3 fixture confirms profile-linked record payload/revision/tombstone and activity history preservation. All migration/repository tests use in-memory SQLite.
 - Approved decisions reflected in the checklist: device-local timezone; 5-minute prayer reminders capped at 6 and stopped at Jamaat or completion; inexact notification with delay warning if exact-alarm access is unavailable; separate notification permission; one sleep entry per user per local wake-up date.
 - This milestone does not implement prayer schedules/UI, notifications/permissions/channels, fasting/sleep/workout UI, Home/Insights integration, or dependencies. Those remain pending user review.
+
+### Phase 7 File-to-15-Day Task Planner
+
+- Added local import support for the supplied LIFE OS XLSX template and CSV, TXT, DOCX, and selectable-text PDF files. Extraction runs on-device; scanned/image-only PDFs, OCR, AI processing, and external file upload are not supported. The supplied template is included at `docs/templates/LIFE_OS_15_Day_Task_Import_Template.xlsx`.
+- Deterministic brief extraction generates a complete 15-day set of review suggestions. Structured XLSX/CSV rows preserve their day assignments and support multiple tasks per day. Source sheet/row, paragraph, page, or text-line references are retained where available. Missing or ambiguous content, empty days, parser uncertainty, dependency errors, and daily-capacity overloads are reported for review.
+- Added a complete 15-day preview with date/capacity controls, regeneration, per-task editing, add/remove, day reassignment, priorities, duration estimates, preferred times, dependencies, measurable completion criteria, source references, and explicit import approval. Plan navigation can select a date; Home/Insights expose upcoming imported-plan summaries.
+- Imported tasks use the existing task records and are created as new records. Existing definitions and append-only completion history are not edited. A schema v5 receipt table provides per-UID idempotency by file fingerprint, start date, and parser version. The receipt and all task rows are written in one SQLite transaction; an import failure rolls back the entire batch. Duplicate approvals fail safely.
+- File contents remain local and tasks default to private. No AI endpoint, file upload service, Firestore write, or cloud sync was added. PDF native extraction and file-picker device behavior still require Android device verification.
 
 ## Blocked / external setup required
 
@@ -79,12 +113,14 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 3 remaining: Design and test Firestore security rules before implementing any remote adapter or upload path. Local ownership checks are not a server security boundary.
 - Phase 4: Complete; prior review accepted it for continued development.
 - Phase 5 remaining: Manual Android notification verification across supported Android versions/devices. Fasting and wellness are implemented locally in this milestone and await review.
-- Phase 6: Learning sessions and private evidence.
-- Phase 7: Android Screen Time collection and permission handling.
-- Phase 8: Shared progress, comparison, leaderboard, and analytics.
-- Phase 9: Reports, PDF preview, device save/share, and JSON export/import.
-- Phase 10: Approval-based adaptive planning and rolling 14-day plans.
-- Phase 11: End-to-end, accessibility, performance, security, and release validation.
+- Phase 6: Secure Cloud Sync and server-enforced two-account data authorization; rules and emulator tests must precede any remote writes.
+- Phase 7: File-to-15-Day Task Planner; implemented locally and awaiting review and final verification.
+- Phase 8: Learning sessions and full private evidence lifecycle; task-completion attachments are a partial first slice.
+- Phase 9: Android Screen Time is implemented locally; device verification and any history persistence remain.
+- Phase 10: Shared progress, comparison, leaderboard, and analytics.
+- Phase 11: Reports, PDF preview, device save/share, and JSON export/import remain unimplemented.
+- Phase 12: Approval-based rolling carryover exists as a partial proposal; goal/deadline/workload analysis and plan-version comparison remain.
+- Phase 13: End-to-end, accessibility, performance, security, and release validation.
 
 ## Verification results
 

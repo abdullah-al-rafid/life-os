@@ -373,7 +373,7 @@ void main() {
     },
   );
 
-  test('version 1 database upgrades to version 4 without losing records', () async {
+  test('version 1 database upgrades to version 5 without losing records', () async {
     await database.close();
     final executor = NativeDatabase.memory(
       setup: (db) {
@@ -422,7 +422,7 @@ void main() {
         .getSingle();
     expect(record.id, 'old');
     expect(record.deletedAtUtcMs, isNull);
-    expect(version.data['user_version'], 4);
+    expect(version.data['user_version'], 5);
     final historyTable = await upgraded
         .customSelect(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activity_history'",
@@ -435,10 +435,11 @@ void main() {
         )
         .getSingleOrNull();
     expect(trackingTable, isNotNull);
+    expect(await upgraded.select(upgraded.taskPlanImports).get(), isEmpty);
   });
 
   test(
-    'version 2 database upgrades to version 4 without changing stored rows',
+    'version 2 database upgrades to version 5 without changing stored rows',
     () async {
       await database.close();
       final executor = NativeDatabase.memory(
@@ -481,7 +482,8 @@ void main() {
           .getSingle();
       expect(record.payloadJson, '{"title":"legacy"}');
       expect(record.deletedAtUtcMs, isNull);
-      expect(version.data['user_version'], 4);
+      expect(version.data['user_version'], 5);
+      expect(await upgraded.select(upgraded.taskPlanImports).get(), isEmpty);
       final trackingTable = await upgraded
           .customSelect(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tracking_entries'",
@@ -580,8 +582,127 @@ void main() {
       expect(record.deletedAtUtcMs, 3);
       expect(history.payloadJson, '{"status":"done"}');
       expect(history.localDate, '2026-10-14');
-      expect(version.data['user_version'], 4);
+      expect(version.data['user_version'], 5);
       expect(await upgraded.select(upgraded.trackingEntries).get(), isEmpty);
+      expect(await upgraded.select(upgraded.taskPlanImports).get(), isEmpty);
+    },
+  );
+
+  test('version 4 migration adds only the plan import receipt table', () async {
+    await database.close();
+    final executor = NativeDatabase.memory(
+      setup: (db) {
+        db.execute(
+          '''CREATE TABLE profiles (auth_uid TEXT NOT NULL PRIMARY KEY, display_name TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL)''',
+        );
+        db.execute(
+          '''CREATE TABLE stored_records (id TEXT NOT NULL PRIMARY KEY, owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid), kind TEXT NOT NULL, visibility TEXT NOT NULL, payload_json TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL, timezone_id TEXT, sync_status TEXT NOT NULL DEFAULT 'localOnly', revision INTEGER NOT NULL DEFAULT 1, last_synced_at_utc_ms INTEGER, remote_conflict_json TEXT, deleted_at_utc_ms INTEGER)''',
+        );
+        db.execute(
+          '''CREATE TABLE activity_history (id TEXT NOT NULL PRIMARY KEY, owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid), definition_id TEXT NOT NULL, kind TEXT NOT NULL, occurrence_key TEXT NOT NULL, local_date TEXT NOT NULL, visibility TEXT NOT NULL, payload_json TEXT NOT NULL, recorded_at_utc_ms INTEGER NOT NULL, UNIQUE(owner_uid, definition_id, kind, occurrence_key))''',
+        );
+        db.execute(
+          '''CREATE TABLE tracking_entries (id TEXT NOT NULL PRIMARY KEY, owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid), kind TEXT NOT NULL, local_date TEXT NOT NULL, entry_key TEXT NOT NULL, visibility TEXT NOT NULL, payload_json TEXT NOT NULL, created_at_utc_ms INTEGER NOT NULL, updated_at_utc_ms INTEGER NOT NULL, revision INTEGER NOT NULL DEFAULT 1, deleted_at_utc_ms INTEGER)''',
+        );
+        db.execute("INSERT INTO profiles VALUES ('uid-a', 'A', 1, 1)");
+        db.execute(
+          "INSERT INTO stored_records (id,owner_uid,kind,visibility,payload_json,created_at_utc_ms,updated_at_utc_ms) VALUES ('kept','uid-a','task','private','{}',1,1)",
+        );
+        db.execute('PRAGMA user_version = 4');
+      },
+    );
+    final upgraded = LifeDatabase.forTesting(executor);
+    addTearDown(upgraded.close);
+    expect(
+      (await upgraded.select(upgraded.storedRecords).get()).single.id,
+      'kept',
+    );
+    expect(await upgraded.select(upgraded.taskPlanImports).get(), isEmpty);
+    final version = await upgraded
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(version.data['user_version'], 5);
+  });
+
+  test('approved plan rows and receipt commit in one transaction', () async {
+    await _saveProfileAs(repository, identity, 'uid-a');
+    final receipt = _receipt('fingerprint');
+    await repository.saveTaskPlanAtomically([
+      _record(id: 'import-1', owner: 'uid-a', payload: '{"title":"First"}'),
+      _record(id: 'import-2', owner: 'uid-a', payload: '{"title":"Second"}'),
+    ], receipt);
+    expect(
+      (await repository.watchVisibleRecords().first).map((r) => r.id),
+      containsAll(['import-1', 'import-2']),
+    );
+    expect(
+      (await database.select(database.taskPlanImports).get()).single.ownerUid,
+      'uid-a',
+    );
+    await expectLater(repository.synchronize(), throwsA(isA<SyncNotEnabled>()));
+  });
+
+  test('duplicate imports are rejected without adding any task rows', () async {
+    await _saveProfileAs(repository, identity, 'uid-a');
+    await repository.saveTaskPlanAtomically([
+      _record(id: 'one', owner: 'uid-a'),
+    ], _receipt('same-file'));
+    await expectLater(
+      repository.saveTaskPlanAtomically([
+        _record(id: 'two', owner: 'uid-a'),
+      ], _receipt('same-file')),
+      throwsA(isA<DuplicateTaskPlanImport>()),
+    );
+    expect((await repository.watchVisibleRecords().first).map((r) => r.id), [
+      'one',
+    ]);
+  });
+
+  test(
+    'invalid second task rolls back first task and import receipt',
+    () async {
+      await _saveProfileAs(repository, identity, 'uid-a');
+      await expectLater(
+        repository.saveTaskPlanAtomically([
+          _record(id: 'first', owner: 'uid-a'),
+          _record(id: 'invalid-revision', owner: 'uid-a', revision: 2),
+        ], _receipt('rollback')),
+        throwsA(isA<RecordValidationFailure>()),
+      );
+      expect(await repository.watchVisibleRecords().first, isEmpty);
+      expect(await database.select(database.taskPlanImports).get(), isEmpty);
+    },
+  );
+
+  test(
+    'task-plan import refuses account mismatch and is scoped per UID',
+    () async {
+      await _saveProfileAs(repository, identity, 'uid-a');
+      await expectLater(
+        Future<void>.sync(
+          () => repository.saveTaskPlanAtomically([
+            _record(id: 'wrong-owner', owner: 'uid-b'),
+          ], _receipt('wrong-owner')),
+        ),
+        throwsA(isA<OwnershipViolation>()),
+      );
+      await repository.saveTaskPlanAtomically([
+        _record(id: 'a-task', owner: 'uid-a'),
+      ], _receipt('per-user'));
+      identity.currentUid = 'uid-b';
+      await _saveProfileAs(repository, identity, 'uid-b');
+      await repository.saveTaskPlanAtomically([
+        _record(id: 'b-task', owner: 'uid-b'),
+      ], _receipt('per-user', owner: 'uid-b'));
+      expect((await repository.watchVisibleRecords().first).map((r) => r.id), [
+        'b-task',
+      ]);
+      expect(
+        (await database.select(database.taskPlanImports).get())
+            .map((r) => r.ownerUid)
+            .toSet(),
+        {'uid-a', 'uid-b'},
+      );
     },
   );
 }
@@ -672,3 +793,14 @@ LifeRecord _record({
     deletedAtUtc: deletedAtUtc,
   );
 }
+
+TaskPlanImportReceipt _receipt(String fingerprint, {String owner = 'uid-a'}) =>
+    TaskPlanImportReceipt(
+      id: 'receipt-$owner-$fingerprint',
+      ownerUid: owner,
+      sourceFingerprint: fingerprint,
+      startDate: '2026-10-14',
+      parserVersion: '1',
+      taskIdsJson: '[]',
+      importedAtUtc: DateTime.utc(2026, 10, 14),
+    );

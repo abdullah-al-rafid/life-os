@@ -4,6 +4,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_os/core/database/life_database.dart';
 import 'package:life_os/features/planning/domain/planning_repository.dart';
+import 'package:life_os/features/planning/domain/task_plan_import.dart';
 import 'package:life_os/features/records/data/drift_life_record_store.dart';
 import 'package:life_os/features/records/domain/life_record.dart';
 import 'package:life_os/features/records/domain/life_record_repository.dart';
@@ -225,6 +226,90 @@ void main() {
     );
   });
 
+  test(
+    'approved 15-day plan saves dated tasks and duplicate approval preserves history',
+    () async {
+      final start = DateTime(2026, 10, 14);
+      final tasks = [
+        for (var day = 1; day <= 15; day++)
+          TaskPlanDraft(
+            id: 'draft:$day',
+            dayOffset: day,
+            date: _date(start.add(Duration(days: day - 1))),
+            title: 'Plan task $day',
+            description: 'Action for day $day',
+            category: 'Study',
+            priority: day == 1 ? 1 : 2,
+            durationMinutes: 25,
+            completionCriteria: 'Record one result for day $day',
+            dependencies: day == 1 ? const [] : ['draft:${day - 1}'],
+            sourceReference: 'Sheet Tasks row ${day + 4}',
+            suggested: false,
+            visibility: RecordVisibility.private,
+          ),
+      ];
+      final saved = await repository.importPlan(
+        sourceFingerprint: 'sha256-fingerprint',
+        startDate: start,
+        tasks: tasks,
+      );
+      expect(saved, hasLength(15));
+      expect(saved.first.scheduledDate, '2026-10-14');
+      expect(saved.last.scheduledDate, '2026-10-28');
+      expect(saved.first.visibility, RecordVisibility.private);
+      expect(saved[1].dependencies, [saved.first.id]);
+      expect(saved.last.completionCriteria, 'Record one result for day 15');
+      await repository.complete(saved.first, start, CompletionStatus.done);
+      await expectLater(
+        repository.importPlan(
+          sourceFingerprint: 'sha256-fingerprint',
+          startDate: start,
+          tasks: tasks,
+        ),
+        throwsA(isA<DuplicateTaskPlanImport>()),
+      );
+      final history = await repository
+          .watchHistory(definitionId: saved.first.id)
+          .first;
+      expect(history, hasLength(1));
+      expect(history.single.localDate, '2026-10-14');
+      expect(
+        (await repository.watchItems(kind: PlanningKind.task).first),
+        hasLength(15),
+      );
+    },
+  );
+
+  test(
+    'imported task date cannot diverge from its assigned plan day',
+    () async {
+      await expectLater(
+        repository.importPlan(
+          sourceFingerprint: 'bad-date',
+          startDate: DateTime(2026, 10, 14),
+          tasks: [
+            TaskPlanDraft(
+              id: 'task',
+              dayOffset: 2,
+              date: '2026-10-14',
+              title: 'Invalid date',
+              description: '',
+              category: 'Study',
+              priority: 2,
+              durationMinutes: 30,
+              completionCriteria: '',
+              dependencies: const [],
+              sourceReference: '',
+              suggested: false,
+              visibility: RecordVisibility.private,
+            ),
+          ],
+        ),
+        throwsA(isA<PlanningValidationFailure>()),
+      );
+    },
+  );
+
   test('history store rejects malformed local events', () async {
     await expectLater(
       DriftPlanningHistoryStore(database).add(
@@ -344,12 +429,47 @@ void main() {
       );
     },
   );
+
+  test('evidence-bearing completion stays private for shared tasks', () async {
+    final shared = await repository.save(
+      kind: PlanningKind.task,
+      title: 'Study chapter',
+      scheduledDate: _today(),
+      visibility: RecordVisibility.shared,
+    );
+    await repository.complete(
+      shared,
+      DateTime.now(),
+      CompletionStatus.done,
+      evidence: const [
+        {
+          'key': 'evidence.jpg',
+          'name': 'notes.jpg',
+          'extension': 'jpg',
+          'sizeBytes': 1024,
+          'addedAtUtc': '2026-10-14T00:00:00.000Z',
+        },
+      ],
+    );
+    identity.switchTo('uid-b');
+    expect(
+      await repository.watchHistory(definitionId: shared.id).first,
+      isEmpty,
+    );
+    identity.switchTo('uid-a');
+    final own = await repository.watchHistory(definitionId: shared.id).first;
+    expect(own, hasLength(1));
+    expect(own.single.payload, contains('notes.jpg'));
+  });
 }
 
 String _today() {
   final now = DateTime.now();
   return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 }
+
+String _date(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 class _Identity implements CurrentUserIdentity {
   _Identity(this.currentUid);
