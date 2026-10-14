@@ -131,6 +131,25 @@ void main() {
     expect(find.text('WORKSPACE'), findsOneWidget);
     expect(find.text('Insights'), findsOneWidget);
   });
+
+  testWidgets('dashboard exposes a direct 15-day import shortcut', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_app(FakeAuthRepository(initialUser: _testUser)));
+    await tester.pumpAndSettle();
+    final shortcut = find.byKey(const Key('dashboard_import_plan'));
+    await tester.ensureVisible(shortcut);
+    await tester.tap(shortcut);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Choose XLSX, CSV, TXT, PDF, or DOCX'),
+      findsOneWidget,
+    );
+  });
 }
 
 const _testUser = AuthUser(

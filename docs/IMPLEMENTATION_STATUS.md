@@ -11,7 +11,7 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 4 (routines, tasks, goals, habits): Implemented with local-only persistence and tests.
 - Phase 5: Local data foundation, prayer tracking and notifications, fasting, sleep, workouts, and Home/Insights integration implemented; this milestone awaits review. Device-level notification checks remain.
 - Phase 6 (secure cloud sync): Planning is documented; no Firestore rules, adapter, or remote writes are implemented.
-- Phase 7 (File-to-15-Day Task Planner): Local implementation is present; final verification is in progress.
+- Phase 7 (File-to-15-Day Task Planner): Local implementation is present; import is directly reachable from Home and Plan. Final verification is in progress.
 - Phase 8 (Learning and Private Evidence): local task-completion attachments are implemented as a limited first slice; full learning-session workflows and camera capture remain incomplete.
 - Phase 9 (Android Screen Time): local Usage Access query and date-filter UI are implemented; device verification remains.
 - Phase 11 (Reports/Export): Not implemented.
@@ -53,6 +53,8 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Added an approval-only proposal screen that compares completed versus incomplete tasks from prior imported task plans, carries forward unfinished tasks into the next 15 local dates, balances estimated minutes across days, and warns when a day exceeds the selected capacity.
 - The user can change the daily capacity, edit proposed titles, regenerate, and explicitly approve. Approval uses the existing UID-bound atomic task-plan import and receipt table; a stable per-user/per-cycle fingerprint prevents duplicate imports. Existing definitions and append-only history are left unchanged.
 - The Home dashboard lists overdue one-time tasks first and displays each task's priority and estimated minutes.
+- Home now shows the device-local date, every due/overdue item, any available target date, priority and estimated minutes, same-day completion status, and quick Done/Partial/Not Done actions. Completing an overdue one-time task records today's actual completion date while preserving its original scheduled date.
+- Home provides direct 15-day import and Screen Time entry points, a local goals/shared-record summary, a current-day prayer summary, and existing fasting/wellness tracking summaries. Cards state that marked-shared records remain local while cloud sync is off. Plan cards label private versus shared-on-this-device visibility.
 - This is not the complete adaptive planner: it does not yet analyze goal progress, deadlines, all routine commitments, or completion-rate trends; it does not expose full field editing or compare all previous plan versions. It carries forward tasks from prior imported plans only. No automatic activation or historical rewrite occurs.
 
 ### Learning evidence and Android Screen Time (partial)
@@ -121,6 +123,11 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 11: Reports, PDF preview, device save/share, and JSON export/import remain unimplemented.
 - Phase 12: Approval-based rolling carryover exists as a partial proposal; goal/deadline/workload analysis and plan-version comparison remain.
 - Phase 13: End-to-end, accessibility, performance, security, and release validation.
+
+### Final master completion follow-through (2026-10-14)
+
+- Improved Home and Plan discoverability for the existing local importer and clarified local-only sharing. Home shows all due items and exposes same-day completion actions; overdue completion is recorded on the completion date without moving the task's scheduled date.
+- This update does not implement the remaining report/PDF/JSON workflow, complete adaptive analysis, full learning evidence lifecycle, or secure cloud sync. Screen Time and notification delivery still need real-device verification. The cloud-sync blocker remains the absence of administrator-verified trusted UIDs and reviewed/tested Firestore rules; remote writes remain disabled.
 
 ## Verification results
 

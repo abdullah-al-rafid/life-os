@@ -522,7 +522,14 @@ class PlanningRepository {
     final uid = _uid();
     await _ensureProfile(uid);
     final currentItem = await _currentDefinition(item, uid);
-    if (!currentItem.occursOn(date)) {
+    final completionDate = _dateKey(date);
+    final overdueOneTimeTask =
+        currentItem.kind == PlanningKind.task &&
+        currentItem.recurrence == 'once' &&
+        currentItem.scheduledDate != null &&
+        currentItem.scheduledDate!.compareTo(completionDate) < 0 &&
+        completionDate == _dateKey(DateTime.now());
+    if (!currentItem.occursOn(date) && !overdueOneTimeTask) {
       throw const PlanningValidationFailure(
         'This item is not scheduled for that date.',
       );

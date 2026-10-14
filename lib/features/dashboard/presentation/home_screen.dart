@@ -10,6 +10,7 @@ import '../../../core/widgets/surface_card.dart';
 import '../../planning/domain/planning_repository.dart';
 import '../../records/presentation/record_providers.dart';
 import '../../tracking/presentation/tracking_summary_card.dart';
+import '../../prayer/presentation/prayer_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -60,44 +61,57 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
                     Align(
                       alignment: Alignment.centerLeft,
+                      child: FilledButton.icon(
+                        key: const Key('dashboard_import_plan'),
+                        onPressed: () => context.go('/plan/import'),
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: const Text('Import 15-Day Plan'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    items.when(
+                      loading: () => const LoadingStateView(),
+                      error: (_, _) => const ErrorStateView(
+                        message: 'Goal and sharing summaries are unavailable.',
+                      ),
+                      data: (values) {
+                        final goals = values
+                            .where((item) => item.kind == PlanningKind.goal)
+                            .length;
+                        final shared = values
+                            .where((item) => item.visibility.name == 'shared')
+                            .length;
+                        return SurfaceCard(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.group_outlined,
+                                color: AppColors.purple,
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  '$goals active goals · $shared records marked shared locally. Cloud sync is off.',
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => context.go('/insights'),
+                                child: const Text('Progress'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _PrayerSummary(dateKey: todayKey),
+                    const SizedBox(height: AppSpacing.lg),
+                    Align(
+                      alignment: Alignment.centerLeft,
                       child: OutlinedButton.icon(
                         onPressed: () => context.go('/screen-time'),
                         icon: const Icon(Icons.query_stats_outlined),
                         label: const Text('Screen Time'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    SurfaceCard(
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.mosque_outlined,
-                            color: AppColors.cyan,
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Prayer',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Track today’s prayers and manage local times.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => context.go('/prayer'),
-                            child: const Text('Open'),
-                          ),
-                        ],
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -272,42 +286,77 @@ class HomeScreen extends ConsumerWidget {
                     horizontal: AppSpacing.lg,
                   ),
                   sliver: SliverList.separated(
-                    itemCount: today.take(6).length,
+                    itemCount: today.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) => SurfaceCard(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.circle_outlined,
-                            color: AppColors.cyan,
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    itemBuilder: (context, index) {
+                      final item = today[index];
+                      final completion = _completionFor(
+                        history.asData?.value ?? const [],
+                        item.id,
+                        todayKey,
+                      );
+                      return SurfaceCard(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  today[index].title,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
+                                const Icon(
+                                  Icons.circle_outlined,
+                                  color: AppColors.cyan,
                                 ),
-                                Text(
-                                  '${today[index].scheduledDate != null && today[index].scheduledDate!.compareTo(todayKey) < 0 ? 'Overdue · ' : ''}${today[index].kind.name} · Priority ${today[index].priority} · ${today[index].durationMinutes} min',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    item.title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
                                 ),
+                                if (item.visibility.name == 'shared')
+                                  const Chip(label: Text('Shared · local')),
                               ],
                             ),
-                          ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
+                            Text(
+                              '${item.scheduledDate != null && item.scheduledDate!.compareTo(todayKey) < 0 ? 'Overdue · ' : ''}${item.kind.name} · Priority ${item.priority} · ${item.durationMinutes} min${item.targetDate == null ? '' : ' · Deadline ${item.targetDate}'}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (completion != null)
+                              Text(
+                                'Today: ${completion.name}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            if (item.kind != PlanningKind.goal)
+                              Wrap(
+                                spacing: 2,
+                                children: [
+                                  _QuickCompletionButton(
+                                    label: 'Done',
+                                    item: item,
+                                    status: CompletionStatus.done,
+                                    date: now,
+                                  ),
+                                  _QuickCompletionButton(
+                                    label: 'Partial',
+                                    item: item,
+                                    status: CompletionStatus.partial,
+                                    date: now,
+                                  ),
+                                  _QuickCompletionButton(
+                                    label: 'Not Done',
+                                    item: item,
+                                    status: CompletionStatus.notDone,
+                                    date: now,
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 );
               },
@@ -320,6 +369,109 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _PrayerSummary extends ConsumerWidget {
+  const _PrayerSummary({required this.dateKey});
+  final String dateKey;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entries = ref.watch(prayerDayEntriesProvider(dateKey));
+    final uid = ref.watch(currentUserIdentityProvider).currentUid;
+    return SurfaceCard(
+      child: Row(
+        children: [
+          const Icon(Icons.mosque_outlined, color: AppColors.cyan),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: entries.when(
+              loading: () => const Text('Loading today’s prayer records…'),
+              error: (_, _) => const Text('Prayer summary is unavailable.'),
+              data: (values) {
+                final own = values
+                    .where((entry) => entry.ownerUid == uid)
+                    .toList();
+                final prayed = own
+                    .where(
+                      (entry) => const {
+                        'prayedOnTime',
+                        'prayedLate',
+                      }.contains(entry.payload['status']),
+                    )
+                    .length;
+                return Text(
+                  'Prayer today · $prayed prayed · ${own.length} of 5 recorded · ${5 - own.length} unrecorded',
+                );
+              },
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/prayer'),
+            child: const Text('Open'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickCompletionButton extends ConsumerWidget {
+  const _QuickCompletionButton({
+    required this.label,
+    required this.item,
+    required this.status,
+    required this.date,
+  });
+  final String label;
+  final PlanningItem item;
+  final CompletionStatus status;
+  final DateTime date;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => TextButton(
+    onPressed: () async {
+      try {
+        await ref.read(planningRepositoryProvider).complete(item, date, status);
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$label saved locally.')));
+        }
+      } on Object catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Could not save this result. It may already be recorded.',
+              ),
+            ),
+          );
+        }
+      }
+    },
+    child: Text(label),
+  );
+}
+
+CompletionStatus? _completionFor(
+  List<PlanningHistoryEntry> history,
+  String id,
+  String date,
+) {
+  for (final entry in history) {
+    if (entry.definitionId != id ||
+        entry.localDate != date ||
+        !entry.kind.endsWith('Completion')) {
+      continue;
+    }
+    try {
+      return CompletionStatus.values.byName(
+        (jsonDecode(entry.payload) as Map<String, dynamic>)['status'] as String,
+      );
+    } on Object {
+      return null;
+    }
+  }
+  return null;
 }
 
 String _date(DateTime date) =>

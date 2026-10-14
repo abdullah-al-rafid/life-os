@@ -69,7 +69,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                         key: const Key('open_plan_import'),
                         onPressed: () => context.push('/plan/import'),
                         icon: const Icon(Icons.upload_file_outlined),
-                        label: const Text('Create a 15-day plan from a file'),
+                        label: const Text('Import 15-Day Plan'),
                       ),
                     ),
                   ),
@@ -793,6 +793,13 @@ class _ItemCard extends ConsumerWidget {
             runSpacing: AppSpacing.xs,
             children: [
               Chip(label: Text(item.kind.name)),
+              Chip(
+                label: Text(
+                  item.visibility == RecordVisibility.shared
+                      ? 'Shared on this device'
+                      : 'Private',
+                ),
+              ),
               if (item.category.isNotEmpty) Chip(label: Text(item.category)),
               if (item.durationMinutes > 0 && item.kind != PlanningKind.goal)
                 Chip(label: Text('${item.durationMinutes} min')),

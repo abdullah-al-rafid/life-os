@@ -141,6 +141,24 @@ void main() {
   );
 
   test(
+    'overdue one-time task can be completed today without changing its due date',
+    () async {
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final item = await repository.save(
+        kind: PlanningKind.task,
+        title: 'Overdue task',
+        scheduledDate: _date(yesterday),
+      );
+      await repository.complete(item, DateTime.now(), CompletionStatus.done);
+      final entry =
+          (await repository.watchHistory(definitionId: item.id).first).single;
+      expect(entry.localDate, _today());
+      final visible = await repository.watchItems().first;
+      expect(visible.single.scheduledDate, _date(yesterday));
+    },
+  );
+
+  test(
     'weekly routines recur on selected weekday and keep schedule data',
     () async {
       final routine = await repository.save(
