@@ -14,7 +14,7 @@ Android-first personal life management app for Abdullah Al Rafid and Jannat. Pha
 lib/
   app/       app entry, router, and design tokens/theme
   core/      reusable UI primitives, state views, and database
-  features/  feature-oriented screens and repositories (auth, dashboard, navigation, planning, records)
+  features/  feature-oriented screens and repositories (auth, dashboard, navigation, planning, prayer, records, tracking)
 functions/   server-side Identity Platform account allowlist
 test/        critical widget coverage
 docs/        requirements, status, and architecture decisions
@@ -30,7 +30,7 @@ The target implementation uses Flutter/Dart and requires separate authenticated 
 
 Phase 1 was developed with Flutter 3.41.2 stable and Dart 3.11.0. Android SDK 36.1.0 and Android Studio JDK 21 are detected. Gradle wrapper 8.14, Android Gradle Plugin 8.11.1, and Kotlin 2.2.20 are configured.
 
-Direct app packages include `cupertino_icons`, `go_router`, `flutter_riverpod`, `firebase_core`, `firebase_auth`, `drift`, `path`, and `path_provider`. `drift_dev` and `build_runner` generate the Drift database code. PDF, notification, and usage-statistics packages have not been added. The server-side account gate uses Firebase Functions v2 and Node.js 20.
+Direct app packages include `cupertino_icons`, `go_router`, `flutter_riverpod`, `firebase_core`, `firebase_auth`, `drift`, `path`, `path_provider`, `flutter_local_notifications` 22.3.2, and `timezone` 0.11.2. `drift_dev` and `build_runner` generate the Drift database code. PDF and usage-statistics packages have not been added. The server-side account gate uses Firebase Functions v2 and Node.js 20.
 
 Install Flutter and Android Studio/SDK, then from the project root run:
 
@@ -55,9 +55,11 @@ To use sign-in, confirm Email/Password is enabled in Firebase Console and use an
 
 ## Offline data foundation
 
-Drift opens `life_os.sqlite` in the app support directory. Schema version 3 contains `profiles` keyed by the supplied Firebase Auth UID, `stored_records`, and an append-only `activity_history` table. Definitions use a common record envelope with typed ownership, visibility, UTC timestamp, revision, sync-status, conflict, and deletion columns; feature data lives in validated JSON payloads. History stores task/routine/habit completion snapshots and goal measurements. Its composite unique key prevents duplicate check-ins per user, definition, and occurrence. Version 3 is additive: it creates the history table without deleting or rewriting existing profiles or records.
+Drift opens `life_os.sqlite` in the app support directory. Schema version 4 contains UID-keyed `profiles`, `stored_records`, append-only `activity_history`, and date-keyed `tracking_entries` for the Phase 5 local data foundation. Definitions use a common record envelope with typed ownership, visibility, UTC timestamp, revision, sync-status, conflict, and deletion columns; feature data lives in validated JSON payloads. Activity history stores task/routine/habit completion snapshots and goal measurements. Tracking entries support prayer, fasting, sleep, and workout data with active-entry uniqueness, including one sleep entry per user per local wake-up date. Version 4 is additive and preserves profiles, stored records, and activity history.
 
-Database migrations use Drift's versioned `MigrationStrategy`. Version 2 added a nullable deletion timestamp to the version 1 record table; version 3 adds history. Local timestamps use UTC epoch milliseconds. Scheduled date and time are represented using the device's local calendar date and wall-clock minute; behavior when travelling or changing time zones still needs a product decision. Local deletes create tombstones, and changed records increment a revision.
+Database migrations use Drift's versioned `MigrationStrategy`. Version 2 added a nullable deletion timestamp to the version 1 record table; version 3 adds activity history; version 4 adds tracking entries and indexes. Migration fixtures cover upgrades from versions 1, 2, and 3. Local timestamps use UTC epoch milliseconds while tracked dates use the device's current local calendar date. A timezone change does not rewrite saved local dates or schedule snapshots. Local deletes create tombstones, and changed records increment a revision.
+
+Phase 5 is implemented locally and awaits review. The prayer UI supports private manual schedule configuration for Fajr, Dhuhr, Asr, Maghrib, and Isha plus date-specific prayer status, optional Jamaat status, and notes. LIFE OS does not calculate prayer times. Android reads the current system timezone for schedule snapshots; dated history keeps its saved timezone and times after schedule edits. Local prayer notifications are enabled only when the user opts in and Android notification permission is granted. Azan and up to six five-minute reminders are scheduled before Jamaat over a seven-day local horizon; prayer completion, dismissal, schedule changes, account changes, permission changes, resume, and detected date/timezone changes reconcile the schedule. Dismissal and one-time snooze state are stored locally for the active UID. Notification permission is separate from exact-alarm access: when notifications are allowed but exact access is unavailable, LIFE OS uses inexact scheduling and warns that delivery may be delayed. Fasting supports date-specific Fasted/Not fasted records with optional notes and an unrecorded state. Wellness supports one sleep duration per local wake-up date and multiple dated workout logs. These private-by-default records use the UID-bound local repository, revision-checked edits, and tombstone deletion. Home and Insights show local fasting and wellness summaries; unrecorded dates are not counted as missed. Cloud synchronization remains off. Manual Android notification delivery/recovery checks still depend on device and Android version; see `docs/PRAYER_NOTIFICATION_SMOKE_TEST.md`.
 
 The repository and remote-store interfaces separate local persistence from future Firestore access. Today all saves stay local with `localOnly` status; `synchronize()` explicitly fails closed. A future conflict with different content is retained for resolution instead of automatically overwriting local data. No Firestore adapter, network read/write, queue, or security rules are implemented.
 
@@ -67,7 +69,9 @@ The database resides in app-specific internal storage. Android's sandbox restric
 
 ## Permissions and configuration
 
-No runtime permissions are currently declared. Authentication uses Firebase SDK-managed session persistence; the app does not store passwords. Future features will request only what they need: notifications for reminders, Android Usage Access through the system settings flow for app usage statistics, and user-selected media access for evidence. Usage Access is a special user-granted Android setting, not a normal runtime permission. No prayer location/provider or AI service is configured.
+Prayer notifications declare `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, and `SCHEDULE_EXACT_ALARM`; notification permission is requested only after the user taps its control, while exact-alarm access is checked and can be granted separately. LIFE OS does not declare `USE_EXACT_ALARM`. Android's notification channel can be adjusted from the app notification settings. Authentication uses Firebase SDK-managed session persistence; the app does not store passwords. Future features may request Android Usage Access through the system settings flow for app usage statistics and user-selected media access for evidence. Usage Access is a special user-granted Android setting, not a normal runtime permission. No prayer location/provider or AI service is configured.
+
+Scheduled notifications are local device requests, not proof of delivery. Inexact alarms may be delayed; Doze, force-stop, notification denial, and manufacturer battery controls can suppress or delay delivery. The plugin boot receiver restores managed schedules after reboot, and the app reconciles on resume. Device/emulator checks for permission prompts, exact-alarm settings, reboot, timezone changes, Doze, and OEM behavior are still required. No remote writes, Cloud Functions, Firebase account enforcement, or Firebase billing changes were made for this milestone.
 
 ## Validation
 
@@ -77,7 +81,7 @@ flutter analyze
 flutter test
 ```
 
-Phase 2–4 results are recorded in `docs/IMPLEMENTATION_STATUS.md`. Auth widget tests use a fake auth repository and do not validate live sign-in. Data and planning repository tests use in-memory SQLite. Firebase options are loaded locally through the generated FlutterFire file.
+Phase 2–5 results are recorded in `docs/IMPLEMENTATION_STATUS.md`. Auth widget tests use a fake auth repository and do not validate live sign-in. Data and planning/tracking repository tests use in-memory SQLite. Firebase options are loaded locally through the generated FlutterFire file.
 
 ## Build
 

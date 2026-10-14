@@ -8,6 +8,11 @@ import '../features/navigation/presentation/app_shell.dart';
 import '../features/navigation/presentation/section_screen.dart';
 import '../features/planning/domain/planning_repository.dart';
 import '../features/planning/presentation/planning_screens.dart';
+import '../features/prayer/presentation/prayer_screen.dart';
+import '../features/prayer/presentation/prayer_reminder_lifecycle.dart';
+import '../features/prayer/presentation/prayer_settings_screen.dart';
+import '../features/fasting/presentation/fasting_screen.dart';
+import '../features/wellness/presentation/wellness_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   late final GoRouter router;
@@ -50,7 +55,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PasswordResetScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        builder: (context, state, child) =>
+            PrayerReminderLifecycle(child: AppShell(child: child)),
         routes: [
           GoRoute(
             path: '/',
@@ -72,6 +78,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/insights',
             name: 'insights',
             builder: (context, state) => const PlanningInsightsScreen(),
+          ),
+          GoRoute(
+            path: '/prayer',
+            name: 'prayer',
+            builder: (context, state) => const PrayerScreen(),
+          ),
+          GoRoute(
+            path: '/prayer/settings',
+            name: 'prayer-settings',
+            builder: (context, state) => const PrayerSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/fasting',
+            name: 'fasting',
+            builder: (context, state) => const FastingScreen(),
+          ),
+          GoRoute(
+            path: '/wellness',
+            name: 'wellness',
+            builder: (context, state) => const WellnessScreen(),
           ),
           GoRoute(
             path: '/settings',

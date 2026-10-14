@@ -7,6 +7,7 @@ import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../planning/domain/planning_repository.dart';
 import '../../records/presentation/record_providers.dart';
+import '../../tracking/presentation/tracking_summary_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -47,6 +48,42 @@ class HomeScreen extends ConsumerWidget {
                       _date(now),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const TrackingSummaryCard(),
+                    const SizedBox(height: AppSpacing.lg),
+                    SurfaceCard(
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.mosque_outlined,
+                            color: AppColors.cyan,
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Prayer',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  'Track today’s prayers and manage local times.',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => context.go('/prayer'),
+                            child: const Text('Open'),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),

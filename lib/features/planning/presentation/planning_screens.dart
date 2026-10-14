@@ -8,6 +8,7 @@ import '../../../core/widgets/async_state_view.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/domain/life_record.dart';
 import '../../records/presentation/record_providers.dart';
+import '../../tracking/presentation/tracking_summary_card.dart';
 import '../domain/planning_repository.dart';
 
 class PlanningScreen extends ConsumerWidget {
@@ -300,6 +301,8 @@ class PlanningInsightsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 const _LocalOnlyBadge(),
+                const SizedBox(height: AppSpacing.lg),
+                const TrackingSummaryCard(insights: true),
                 const SizedBox(height: AppSpacing.lg),
                 records.when(
                   loading: () => const LoadingStateView(),

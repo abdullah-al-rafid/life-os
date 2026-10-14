@@ -1724,12 +1724,696 @@ class ActivityHistoryCompanion extends UpdateCompanion<ActivityHistoryData> {
   }
 }
 
+class $TrackingEntriesTable extends TrackingEntries
+    with TableInfo<$TrackingEntriesTable, TrackingEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackingEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerUidMeta = const VerificationMeta(
+    'ownerUid',
+  );
+  @override
+  late final GeneratedColumn<String> ownerUid = GeneratedColumn<String>(
+    'owner_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES profiles (auth_uid)',
+    ),
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localDateMeta = const VerificationMeta(
+    'localDate',
+  );
+  @override
+  late final GeneratedColumn<String> localDate = GeneratedColumn<String>(
+    'local_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _entryKeyMeta = const VerificationMeta(
+    'entryKey',
+  );
+  @override
+  late final GeneratedColumn<String> entryKey = GeneratedColumn<String>(
+    'entry_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _visibilityMeta = const VerificationMeta(
+    'visibility',
+  );
+  @override
+  late final GeneratedColumn<String> visibility = GeneratedColumn<String>(
+    'visibility',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtUtcMsMeta = const VerificationMeta(
+    'createdAtUtcMs',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtUtcMs = GeneratedColumn<int>(
+    'created_at_utc_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtUtcMsMeta = const VerificationMeta(
+    'updatedAtUtcMs',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAtUtcMs = GeneratedColumn<int>(
+    'updated_at_utc_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _deletedAtUtcMsMeta = const VerificationMeta(
+    'deletedAtUtcMs',
+  );
+  @override
+  late final GeneratedColumn<int> deletedAtUtcMs = GeneratedColumn<int>(
+    'deleted_at_utc_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    ownerUid,
+    kind,
+    localDate,
+    entryKey,
+    visibility,
+    payloadJson,
+    createdAtUtcMs,
+    updatedAtUtcMs,
+    revision,
+    deletedAtUtcMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tracking_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrackingEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('owner_uid')) {
+      context.handle(
+        _ownerUidMeta,
+        ownerUid.isAcceptableOrUnknown(data['owner_uid']!, _ownerUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUidMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('local_date')) {
+      context.handle(
+        _localDateMeta,
+        localDate.isAcceptableOrUnknown(data['local_date']!, _localDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localDateMeta);
+    }
+    if (data.containsKey('entry_key')) {
+      context.handle(
+        _entryKeyMeta,
+        entryKey.isAcceptableOrUnknown(data['entry_key']!, _entryKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entryKeyMeta);
+    }
+    if (data.containsKey('visibility')) {
+      context.handle(
+        _visibilityMeta,
+        visibility.isAcceptableOrUnknown(data['visibility']!, _visibilityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_visibilityMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('created_at_utc_ms')) {
+      context.handle(
+        _createdAtUtcMsMeta,
+        createdAtUtcMs.isAcceptableOrUnknown(
+          data['created_at_utc_ms']!,
+          _createdAtUtcMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtUtcMsMeta);
+    }
+    if (data.containsKey('updated_at_utc_ms')) {
+      context.handle(
+        _updatedAtUtcMsMeta,
+        updatedAtUtcMs.isAcceptableOrUnknown(
+          data['updated_at_utc_ms']!,
+          _updatedAtUtcMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtUtcMsMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('deleted_at_utc_ms')) {
+      context.handle(
+        _deletedAtUtcMsMeta,
+        deletedAtUtcMs.isAcceptableOrUnknown(
+          data['deleted_at_utc_ms']!,
+          _deletedAtUtcMsMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TrackingEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackingEntryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      ownerUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_uid'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      localDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_date'],
+      )!,
+      entryKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_key'],
+      )!,
+      visibility: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}visibility'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      )!,
+      createdAtUtcMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_utc_ms'],
+      )!,
+      updatedAtUtcMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at_utc_ms'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      deletedAtUtcMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at_utc_ms'],
+      ),
+    );
+  }
+
+  @override
+  $TrackingEntriesTable createAlias(String alias) {
+    return $TrackingEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class TrackingEntryRow extends DataClass
+    implements Insertable<TrackingEntryRow> {
+  final String id;
+  final String ownerUid;
+  final String kind;
+  final String localDate;
+  final String entryKey;
+  final String visibility;
+  final String payloadJson;
+  final int createdAtUtcMs;
+  final int updatedAtUtcMs;
+  final int revision;
+  final int? deletedAtUtcMs;
+  const TrackingEntryRow({
+    required this.id,
+    required this.ownerUid,
+    required this.kind,
+    required this.localDate,
+    required this.entryKey,
+    required this.visibility,
+    required this.payloadJson,
+    required this.createdAtUtcMs,
+    required this.updatedAtUtcMs,
+    required this.revision,
+    this.deletedAtUtcMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['owner_uid'] = Variable<String>(ownerUid);
+    map['kind'] = Variable<String>(kind);
+    map['local_date'] = Variable<String>(localDate);
+    map['entry_key'] = Variable<String>(entryKey);
+    map['visibility'] = Variable<String>(visibility);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['created_at_utc_ms'] = Variable<int>(createdAtUtcMs);
+    map['updated_at_utc_ms'] = Variable<int>(updatedAtUtcMs);
+    map['revision'] = Variable<int>(revision);
+    if (!nullToAbsent || deletedAtUtcMs != null) {
+      map['deleted_at_utc_ms'] = Variable<int>(deletedAtUtcMs);
+    }
+    return map;
+  }
+
+  TrackingEntriesCompanion toCompanion(bool nullToAbsent) {
+    return TrackingEntriesCompanion(
+      id: Value(id),
+      ownerUid: Value(ownerUid),
+      kind: Value(kind),
+      localDate: Value(localDate),
+      entryKey: Value(entryKey),
+      visibility: Value(visibility),
+      payloadJson: Value(payloadJson),
+      createdAtUtcMs: Value(createdAtUtcMs),
+      updatedAtUtcMs: Value(updatedAtUtcMs),
+      revision: Value(revision),
+      deletedAtUtcMs: deletedAtUtcMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAtUtcMs),
+    );
+  }
+
+  factory TrackingEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackingEntryRow(
+      id: serializer.fromJson<String>(json['id']),
+      ownerUid: serializer.fromJson<String>(json['ownerUid']),
+      kind: serializer.fromJson<String>(json['kind']),
+      localDate: serializer.fromJson<String>(json['localDate']),
+      entryKey: serializer.fromJson<String>(json['entryKey']),
+      visibility: serializer.fromJson<String>(json['visibility']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      createdAtUtcMs: serializer.fromJson<int>(json['createdAtUtcMs']),
+      updatedAtUtcMs: serializer.fromJson<int>(json['updatedAtUtcMs']),
+      revision: serializer.fromJson<int>(json['revision']),
+      deletedAtUtcMs: serializer.fromJson<int?>(json['deletedAtUtcMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'ownerUid': serializer.toJson<String>(ownerUid),
+      'kind': serializer.toJson<String>(kind),
+      'localDate': serializer.toJson<String>(localDate),
+      'entryKey': serializer.toJson<String>(entryKey),
+      'visibility': serializer.toJson<String>(visibility),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'createdAtUtcMs': serializer.toJson<int>(createdAtUtcMs),
+      'updatedAtUtcMs': serializer.toJson<int>(updatedAtUtcMs),
+      'revision': serializer.toJson<int>(revision),
+      'deletedAtUtcMs': serializer.toJson<int?>(deletedAtUtcMs),
+    };
+  }
+
+  TrackingEntryRow copyWith({
+    String? id,
+    String? ownerUid,
+    String? kind,
+    String? localDate,
+    String? entryKey,
+    String? visibility,
+    String? payloadJson,
+    int? createdAtUtcMs,
+    int? updatedAtUtcMs,
+    int? revision,
+    Value<int?> deletedAtUtcMs = const Value.absent(),
+  }) => TrackingEntryRow(
+    id: id ?? this.id,
+    ownerUid: ownerUid ?? this.ownerUid,
+    kind: kind ?? this.kind,
+    localDate: localDate ?? this.localDate,
+    entryKey: entryKey ?? this.entryKey,
+    visibility: visibility ?? this.visibility,
+    payloadJson: payloadJson ?? this.payloadJson,
+    createdAtUtcMs: createdAtUtcMs ?? this.createdAtUtcMs,
+    updatedAtUtcMs: updatedAtUtcMs ?? this.updatedAtUtcMs,
+    revision: revision ?? this.revision,
+    deletedAtUtcMs: deletedAtUtcMs.present
+        ? deletedAtUtcMs.value
+        : this.deletedAtUtcMs,
+  );
+  TrackingEntryRow copyWithCompanion(TrackingEntriesCompanion data) {
+    return TrackingEntryRow(
+      id: data.id.present ? data.id.value : this.id,
+      ownerUid: data.ownerUid.present ? data.ownerUid.value : this.ownerUid,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      localDate: data.localDate.present ? data.localDate.value : this.localDate,
+      entryKey: data.entryKey.present ? data.entryKey.value : this.entryKey,
+      visibility: data.visibility.present
+          ? data.visibility.value
+          : this.visibility,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      createdAtUtcMs: data.createdAtUtcMs.present
+          ? data.createdAtUtcMs.value
+          : this.createdAtUtcMs,
+      updatedAtUtcMs: data.updatedAtUtcMs.present
+          ? data.updatedAtUtcMs.value
+          : this.updatedAtUtcMs,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      deletedAtUtcMs: data.deletedAtUtcMs.present
+          ? data.deletedAtUtcMs.value
+          : this.deletedAtUtcMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackingEntryRow(')
+          ..write('id: $id, ')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('kind: $kind, ')
+          ..write('localDate: $localDate, ')
+          ..write('entryKey: $entryKey, ')
+          ..write('visibility: $visibility, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('createdAtUtcMs: $createdAtUtcMs, ')
+          ..write('updatedAtUtcMs: $updatedAtUtcMs, ')
+          ..write('revision: $revision, ')
+          ..write('deletedAtUtcMs: $deletedAtUtcMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    ownerUid,
+    kind,
+    localDate,
+    entryKey,
+    visibility,
+    payloadJson,
+    createdAtUtcMs,
+    updatedAtUtcMs,
+    revision,
+    deletedAtUtcMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackingEntryRow &&
+          other.id == this.id &&
+          other.ownerUid == this.ownerUid &&
+          other.kind == this.kind &&
+          other.localDate == this.localDate &&
+          other.entryKey == this.entryKey &&
+          other.visibility == this.visibility &&
+          other.payloadJson == this.payloadJson &&
+          other.createdAtUtcMs == this.createdAtUtcMs &&
+          other.updatedAtUtcMs == this.updatedAtUtcMs &&
+          other.revision == this.revision &&
+          other.deletedAtUtcMs == this.deletedAtUtcMs);
+}
+
+class TrackingEntriesCompanion extends UpdateCompanion<TrackingEntryRow> {
+  final Value<String> id;
+  final Value<String> ownerUid;
+  final Value<String> kind;
+  final Value<String> localDate;
+  final Value<String> entryKey;
+  final Value<String> visibility;
+  final Value<String> payloadJson;
+  final Value<int> createdAtUtcMs;
+  final Value<int> updatedAtUtcMs;
+  final Value<int> revision;
+  final Value<int?> deletedAtUtcMs;
+  final Value<int> rowid;
+  const TrackingEntriesCompanion({
+    this.id = const Value.absent(),
+    this.ownerUid = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.localDate = const Value.absent(),
+    this.entryKey = const Value.absent(),
+    this.visibility = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.createdAtUtcMs = const Value.absent(),
+    this.updatedAtUtcMs = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.deletedAtUtcMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrackingEntriesCompanion.insert({
+    required String id,
+    required String ownerUid,
+    required String kind,
+    required String localDate,
+    required String entryKey,
+    required String visibility,
+    required String payloadJson,
+    required int createdAtUtcMs,
+    required int updatedAtUtcMs,
+    this.revision = const Value.absent(),
+    this.deletedAtUtcMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       ownerUid = Value(ownerUid),
+       kind = Value(kind),
+       localDate = Value(localDate),
+       entryKey = Value(entryKey),
+       visibility = Value(visibility),
+       payloadJson = Value(payloadJson),
+       createdAtUtcMs = Value(createdAtUtcMs),
+       updatedAtUtcMs = Value(updatedAtUtcMs);
+  static Insertable<TrackingEntryRow> custom({
+    Expression<String>? id,
+    Expression<String>? ownerUid,
+    Expression<String>? kind,
+    Expression<String>? localDate,
+    Expression<String>? entryKey,
+    Expression<String>? visibility,
+    Expression<String>? payloadJson,
+    Expression<int>? createdAtUtcMs,
+    Expression<int>? updatedAtUtcMs,
+    Expression<int>? revision,
+    Expression<int>? deletedAtUtcMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ownerUid != null) 'owner_uid': ownerUid,
+      if (kind != null) 'kind': kind,
+      if (localDate != null) 'local_date': localDate,
+      if (entryKey != null) 'entry_key': entryKey,
+      if (visibility != null) 'visibility': visibility,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (createdAtUtcMs != null) 'created_at_utc_ms': createdAtUtcMs,
+      if (updatedAtUtcMs != null) 'updated_at_utc_ms': updatedAtUtcMs,
+      if (revision != null) 'revision': revision,
+      if (deletedAtUtcMs != null) 'deleted_at_utc_ms': deletedAtUtcMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrackingEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? ownerUid,
+    Value<String>? kind,
+    Value<String>? localDate,
+    Value<String>? entryKey,
+    Value<String>? visibility,
+    Value<String>? payloadJson,
+    Value<int>? createdAtUtcMs,
+    Value<int>? updatedAtUtcMs,
+    Value<int>? revision,
+    Value<int?>? deletedAtUtcMs,
+    Value<int>? rowid,
+  }) {
+    return TrackingEntriesCompanion(
+      id: id ?? this.id,
+      ownerUid: ownerUid ?? this.ownerUid,
+      kind: kind ?? this.kind,
+      localDate: localDate ?? this.localDate,
+      entryKey: entryKey ?? this.entryKey,
+      visibility: visibility ?? this.visibility,
+      payloadJson: payloadJson ?? this.payloadJson,
+      createdAtUtcMs: createdAtUtcMs ?? this.createdAtUtcMs,
+      updatedAtUtcMs: updatedAtUtcMs ?? this.updatedAtUtcMs,
+      revision: revision ?? this.revision,
+      deletedAtUtcMs: deletedAtUtcMs ?? this.deletedAtUtcMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (ownerUid.present) {
+      map['owner_uid'] = Variable<String>(ownerUid.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (localDate.present) {
+      map['local_date'] = Variable<String>(localDate.value);
+    }
+    if (entryKey.present) {
+      map['entry_key'] = Variable<String>(entryKey.value);
+    }
+    if (visibility.present) {
+      map['visibility'] = Variable<String>(visibility.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (createdAtUtcMs.present) {
+      map['created_at_utc_ms'] = Variable<int>(createdAtUtcMs.value);
+    }
+    if (updatedAtUtcMs.present) {
+      map['updated_at_utc_ms'] = Variable<int>(updatedAtUtcMs.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (deletedAtUtcMs.present) {
+      map['deleted_at_utc_ms'] = Variable<int>(deletedAtUtcMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackingEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('kind: $kind, ')
+          ..write('localDate: $localDate, ')
+          ..write('entryKey: $entryKey, ')
+          ..write('visibility: $visibility, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('createdAtUtcMs: $createdAtUtcMs, ')
+          ..write('updatedAtUtcMs: $updatedAtUtcMs, ')
+          ..write('revision: $revision, ')
+          ..write('deletedAtUtcMs: $deletedAtUtcMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LifeDatabase extends GeneratedDatabase {
   _$LifeDatabase(QueryExecutor e) : super(e);
   $LifeDatabaseManager get managers => $LifeDatabaseManager(this);
   late final $ProfilesTable profiles = $ProfilesTable(this);
   late final $StoredRecordsTable storedRecords = $StoredRecordsTable(this);
   late final $ActivityHistoryTable activityHistory = $ActivityHistoryTable(
+    this,
+  );
+  late final $TrackingEntriesTable trackingEntries = $TrackingEntriesTable(
     this,
   );
   @override
@@ -1740,6 +2424,7 @@ abstract class _$LifeDatabase extends GeneratedDatabase {
     profiles,
     storedRecords,
     activityHistory,
+    trackingEntries,
   ];
 }
 
@@ -1798,6 +2483,27 @@ final class $$ProfilesTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _activityHistoryRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TrackingEntriesTable, List<TrackingEntryRow>>
+  _trackingEntriesRefsTable(_$LifeDatabase db) => MultiTypedResultKey.fromTable(
+    db.trackingEntries,
+    aliasName: 'profiles__auth_uid__tracking_entries__owner_uid',
+  );
+
+  $$TrackingEntriesTableProcessedTableManager get trackingEntriesRefs {
+    final manager =
+        $$TrackingEntriesTableTableManager($_db, $_db.trackingEntries).filter(
+          (f) =>
+              f.ownerUid.authUid.sqlEquals($_itemColumn<String>('auth_uid')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _trackingEntriesRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -1875,6 +2581,31 @@ class $$ProfilesTableFilterComposer
           }) => $$ActivityHistoryTableFilterComposer(
             $db: $db,
             $table: $db.activityHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> trackingEntriesRefs(
+    Expression<bool> Function($$TrackingEntriesTableFilterComposer f) f,
+  ) {
+    final $$TrackingEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.authUid,
+      referencedTable: $db.trackingEntries,
+      getReferencedColumn: (t) => t.ownerUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackingEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.trackingEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1991,6 +2722,31 @@ class $$ProfilesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> trackingEntriesRefs<T extends Object>(
+    Expression<T> Function($$TrackingEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$TrackingEntriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.authUid,
+      referencedTable: $db.trackingEntries,
+      getReferencedColumn: (t) => t.ownerUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackingEntriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.trackingEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ProfilesTableTableManager
@@ -2009,6 +2765,7 @@ class $$ProfilesTableTableManager
           PrefetchHooks Function({
             bool storedRecordsRefs,
             bool activityHistoryRefs,
+            bool trackingEntriesRefs,
           })
         > {
   $$ProfilesTableTableManager(_$LifeDatabase db, $ProfilesTable table)
@@ -2059,12 +2816,17 @@ class $$ProfilesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({storedRecordsRefs = false, activityHistoryRefs = false}) {
+              ({
+                storedRecordsRefs = false,
+                activityHistoryRefs = false,
+                trackingEntriesRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (storedRecordsRefs) db.storedRecords,
                     if (activityHistoryRefs) db.activityHistory,
+                    if (trackingEntriesRefs) db.trackingEntries,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -2111,6 +2873,27 @@ class $$ProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (trackingEntriesRefs)
+                        await $_getPrefetchedData<
+                          Profile,
+                          $ProfilesTable,
+                          TrackingEntryRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProfilesTableReferences
+                              ._trackingEntriesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).trackingEntriesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.ownerUid == item.authUid,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -2131,7 +2914,11 @@ typedef $$ProfilesTableProcessedTableManager =
       $$ProfilesTableUpdateCompanionBuilder,
       (Profile, $$ProfilesTableReferences),
       Profile,
-      PrefetchHooks Function({bool storedRecordsRefs, bool activityHistoryRefs})
+      PrefetchHooks Function({
+        bool storedRecordsRefs,
+        bool activityHistoryRefs,
+        bool trackingEntriesRefs,
+      })
     >;
 typedef $$StoredRecordsTableCreateCompanionBuilder =
     StoredRecordsCompanion Function({
@@ -3040,6 +3827,460 @@ typedef $$ActivityHistoryTableProcessedTableManager =
       ActivityHistoryData,
       PrefetchHooks Function({bool ownerUid})
     >;
+typedef $$TrackingEntriesTableCreateCompanionBuilder =
+    TrackingEntriesCompanion Function({
+      required String id,
+      required String ownerUid,
+      required String kind,
+      required String localDate,
+      required String entryKey,
+      required String visibility,
+      required String payloadJson,
+      required int createdAtUtcMs,
+      required int updatedAtUtcMs,
+      Value<int> revision,
+      Value<int?> deletedAtUtcMs,
+      Value<int> rowid,
+    });
+typedef $$TrackingEntriesTableUpdateCompanionBuilder =
+    TrackingEntriesCompanion Function({
+      Value<String> id,
+      Value<String> ownerUid,
+      Value<String> kind,
+      Value<String> localDate,
+      Value<String> entryKey,
+      Value<String> visibility,
+      Value<String> payloadJson,
+      Value<int> createdAtUtcMs,
+      Value<int> updatedAtUtcMs,
+      Value<int> revision,
+      Value<int?> deletedAtUtcMs,
+      Value<int> rowid,
+    });
+
+final class $$TrackingEntriesTableReferences
+    extends
+        BaseReferences<
+          _$LifeDatabase,
+          $TrackingEntriesTable,
+          TrackingEntryRow
+        > {
+  $$TrackingEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ProfilesTable _ownerUidTable(_$LifeDatabase db) => db.profiles
+      .createAlias('tracking_entries__owner_uid__profiles__auth_uid');
+
+  $$ProfilesTableProcessedTableManager get ownerUid {
+    final $_column = $_itemColumn<String>('owner_uid')!;
+
+    final manager = $$ProfilesTableTableManager(
+      $_db,
+      $_db.profiles,
+    ).filter((f) => f.authUid.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_ownerUidTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TrackingEntriesTableFilterComposer
+    extends Composer<_$LifeDatabase, $TrackingEntriesTable> {
+  $$TrackingEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localDate => $composableBuilder(
+    column: $table.localDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entryKey => $composableBuilder(
+    column: $table.entryKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtUtcMs => $composableBuilder(
+    column: $table.createdAtUtcMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAtUtcMs => $composableBuilder(
+    column: $table.updatedAtUtcMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAtUtcMs => $composableBuilder(
+    column: $table.deletedAtUtcMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ProfilesTableFilterComposer get ownerUid {
+    final $$ProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingEntriesTableOrderingComposer
+    extends Composer<_$LifeDatabase, $TrackingEntriesTable> {
+  $$TrackingEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localDate => $composableBuilder(
+    column: $table.localDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entryKey => $composableBuilder(
+    column: $table.entryKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtUtcMs => $composableBuilder(
+    column: $table.createdAtUtcMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAtUtcMs => $composableBuilder(
+    column: $table.updatedAtUtcMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAtUtcMs => $composableBuilder(
+    column: $table.deletedAtUtcMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ProfilesTableOrderingComposer get ownerUid {
+    final $$ProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingEntriesTableAnnotationComposer
+    extends Composer<_$LifeDatabase, $TrackingEntriesTable> {
+  $$TrackingEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get localDate =>
+      $composableBuilder(column: $table.localDate, builder: (column) => column);
+
+  GeneratedColumn<String> get entryKey =>
+      $composableBuilder(column: $table.entryKey, builder: (column) => column);
+
+  GeneratedColumn<String> get visibility => $composableBuilder(
+    column: $table.visibility,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAtUtcMs => $composableBuilder(
+    column: $table.createdAtUtcMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAtUtcMs => $composableBuilder(
+    column: $table.updatedAtUtcMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAtUtcMs => $composableBuilder(
+    column: $table.deletedAtUtcMs,
+    builder: (column) => column,
+  );
+
+  $$ProfilesTableAnnotationComposer get ownerUid {
+    final $$ProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.ownerUid,
+      referencedTable: $db.profiles,
+      getReferencedColumn: (t) => t.authUid,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.profiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrackingEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$LifeDatabase,
+          $TrackingEntriesTable,
+          TrackingEntryRow,
+          $$TrackingEntriesTableFilterComposer,
+          $$TrackingEntriesTableOrderingComposer,
+          $$TrackingEntriesTableAnnotationComposer,
+          $$TrackingEntriesTableCreateCompanionBuilder,
+          $$TrackingEntriesTableUpdateCompanionBuilder,
+          (TrackingEntryRow, $$TrackingEntriesTableReferences),
+          TrackingEntryRow,
+          PrefetchHooks Function({bool ownerUid})
+        > {
+  $$TrackingEntriesTableTableManager(
+    _$LifeDatabase db,
+    $TrackingEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackingEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackingEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackingEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> ownerUid = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> localDate = const Value.absent(),
+                Value<String> entryKey = const Value.absent(),
+                Value<String> visibility = const Value.absent(),
+                Value<String> payloadJson = const Value.absent(),
+                Value<int> createdAtUtcMs = const Value.absent(),
+                Value<int> updatedAtUtcMs = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<int?> deletedAtUtcMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackingEntriesCompanion(
+                id: id,
+                ownerUid: ownerUid,
+                kind: kind,
+                localDate: localDate,
+                entryKey: entryKey,
+                visibility: visibility,
+                payloadJson: payloadJson,
+                createdAtUtcMs: createdAtUtcMs,
+                updatedAtUtcMs: updatedAtUtcMs,
+                revision: revision,
+                deletedAtUtcMs: deletedAtUtcMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String ownerUid,
+                required String kind,
+                required String localDate,
+                required String entryKey,
+                required String visibility,
+                required String payloadJson,
+                required int createdAtUtcMs,
+                required int updatedAtUtcMs,
+                Value<int> revision = const Value.absent(),
+                Value<int?> deletedAtUtcMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrackingEntriesCompanion.insert(
+                id: id,
+                ownerUid: ownerUid,
+                kind: kind,
+                localDate: localDate,
+                entryKey: entryKey,
+                visibility: visibility,
+                payloadJson: payloadJson,
+                createdAtUtcMs: createdAtUtcMs,
+                updatedAtUtcMs: updatedAtUtcMs,
+                revision: revision,
+                deletedAtUtcMs: deletedAtUtcMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TrackingEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({ownerUid = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (ownerUid) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.ownerUid,
+                                referencedTable:
+                                    $$TrackingEntriesTableReferences
+                                        ._ownerUidTable(db),
+                                referencedColumn:
+                                    $$TrackingEntriesTableReferences
+                                        ._ownerUidTable(db)
+                                        .authUid,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TrackingEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LifeDatabase,
+      $TrackingEntriesTable,
+      TrackingEntryRow,
+      $$TrackingEntriesTableFilterComposer,
+      $$TrackingEntriesTableOrderingComposer,
+      $$TrackingEntriesTableAnnotationComposer,
+      $$TrackingEntriesTableCreateCompanionBuilder,
+      $$TrackingEntriesTableUpdateCompanionBuilder,
+      (TrackingEntryRow, $$TrackingEntriesTableReferences),
+      TrackingEntryRow,
+      PrefetchHooks Function({bool ownerUid})
+    >;
 
 class $LifeDatabaseManager {
   final _$LifeDatabase _db;
@@ -3050,4 +4291,6 @@ class $LifeDatabaseManager {
       $$StoredRecordsTableTableManager(_db, _db.storedRecords);
   $$ActivityHistoryTableTableManager get activityHistory =>
       $$ActivityHistoryTableTableManager(_db, _db.activityHistory);
+  $$TrackingEntriesTableTableManager get trackingEntries =>
+      $$TrackingEntriesTableTableManager(_db, _db.trackingEntries);
 }

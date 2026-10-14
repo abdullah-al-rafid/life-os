@@ -52,7 +52,7 @@
 
 - Firebase project ownership, region, and account provisioning process for the two named users.
 - Whether Firebase Storage is the selected private evidence backend, and its retention limits.
-- Exact local timezone behavior for records when users travel or timezone settings change.
+- Follow the current device-local timezone for prayer schedules; timezone changes can reschedule future notifications but never rewrite historical local dates or prayer schedule snapshots.
 - Backup, retention, and deletion expectations for personal records and evidence.
 - Whether the currently generated non-Android platform folders should remain supported long-term.
 - Firestore document layout, tested ownership/sharing security rules, server timestamps, retry/backoff, idempotency, and manual conflict-resolution UX before remote synchronization is enabled.
@@ -66,3 +66,28 @@
 - Scheduled date and wall-clock minute are interpreted in the device's current local calendar/time. No IANA timezone identifier is captured by these forms yet; travel/timezone changes remain an open product decision.
 - Shared definitions may be viewed and their completion/progress history can be recorded separately by each authenticated local account. History queries check the event's saved visibility and the definition's current state, hiding other-account events if the definition becomes private, is archived, or is tombstoned.
 - All feature writes remain local-only. The UI states this directly; no remote adapter or upload behavior was introduced. Local ownership and sharing checks remain safeguards inside the app, not security boundaries.
+
+## 2026-10-14 — Phase 5 first milestone: tracking data foundation
+
+- Advanced Drift schema from v3 to v4 additively with `tracking_entries`; existing profiles, stored records, tombstones, and Phase 4 activity history remain untouched by the migration.
+- Use one validated date-keyed entry model for prayer, fasting, sleep, and workouts. Partial unique indexes prevent active duplicate entries; a dedicated partial index enforces at most one active sleep entry per owner and local wake-up date. Tombstones free an active key for a new entry without restoring the deleted row.
+- Bind the local tracking repository to Firebase Auth's current UID, filter reads to own or explicitly shared entries, restrict mutations to the owner, cancel streams at account changes, and require optimistic revision checks. These remain local app safeguards, not a security boundary.
+- Keep all writes local-only. This milestone adds no notification packages or Android permission/configuration changes and implements no prayer, fasting, sleep, or workout screens.
+- Honor the approved Phase 5 defaults during follow-on implementation: current device-local timezone; 5-minute prayer reminders capped at 6 and ending at Jamaat/completion; separate notification permission and exact-alarm access with inexact delay-warning fallback; one sleep duration per user's local wake-up date.
+
+## 2026-10-14 — Phase 5 prayer UI and local data flow
+
+- Store five manually entered Azan/Jamaat pairs in the private versioned prayer schedule record. LIFE OS does not calculate prayer times.
+- Store dated prayer completion as a local tracking entry. Missing rows remain unrecorded; only an explicit user choice creates a missed status. Optional Jamaat status and trimmed notes are saved with the completion.
+- Snapshot the selected prayer's times and current Android IANA timezone when an entry is first created. Later edits to the schedule or device timezone do not rewrite saved local dates or snapshots; revision-checked updates preserve the original snapshot.
+- The Android timezone method channel reads `TimeZone.getDefault().id`. Missing, null, invalid, or unsupported values fail explicitly; reminder scheduling and schedule saves never invent UTC. Tests inject a timezone reader.
+- The prayer schedule and entries remain private/local-only and UID-bound. Shared visibility is not exposed in this UI. Local safeguards are not a security boundary.
+- Added schedule editor and dated prayer screen routes reachable from Home. Notification implementation remains out of scope until the prayer UI/data flow is reviewed.
+
+## 2026-10-14 — Phase 5 local prayer notifications
+
+- Selected `flutter_local_notifications` 22.3.2 and direct `timezone` 0.11.2 for Flutter 3.41.2/Dart 3.11.0. Reuse the existing Android timezone channel instead of adding a second timezone source. Current stable package/API guidance and Android configuration were checked before installation.
+- Schedule locally using the device's current IANA timezone, a seven-day future horizon, one Azan plus reminders every five minutes capped at six before Jamaat, and deterministic per-UID/date/prayer notification IDs. Skip elapsed reminders and stop at Jamaat or any saved prayer result.
+- Require explicit reminder opt-in and a separate user tap to request Android notification permission. Exact-alarm access is a distinct setting. Use exact-while-idle mode only when access is granted; otherwise schedule inexact-while-idle and tell the user that delivery may be delayed. Do not declare `USE_EXACT_ALARM`.
+- Persist per-session dismissal and one-time snooze, plus reminder disable state, in a private UID-owned local prayer-kind record. Completion/dismissal cancels session IDs; schedule, permission, account, resume, date, and timezone changes reconcile. Plugin boot receiver restores notifications after reboot. Historical local dates/schedule snapshots are not modified.
+- Keep a testable gateway/service boundary with injected clock, timezone reader, and local preference store. No Firebase sync, Firebase config, account enforcement, billing, Firestore rules, or data upload is changed.

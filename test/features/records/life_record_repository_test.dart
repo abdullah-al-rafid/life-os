@@ -373,13 +373,11 @@ void main() {
     },
   );
 
-  test(
-    'version 1 database upgrades to version 3 without losing records',
-    () async {
-      await database.close();
-      final executor = NativeDatabase.memory(
-        setup: (db) {
-          db.execute('''
+  test('version 1 database upgrades to version 4 without losing records', () async {
+    await database.close();
+    final executor = NativeDatabase.memory(
+      setup: (db) {
+        db.execute('''
           CREATE TABLE profiles (
             auth_uid TEXT NOT NULL PRIMARY KEY,
             display_name TEXT NOT NULL,
@@ -387,7 +385,7 @@ void main() {
             updated_at_utc_ms INTEGER NOT NULL
           )
         ''');
-          db.execute('''
+        db.execute('''
           CREATE TABLE stored_records (
             id TEXT NOT NULL PRIMARY KEY,
             owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid),
@@ -403,39 +401,44 @@ void main() {
             remote_conflict_json TEXT
           )
         ''');
-          db.execute("INSERT INTO profiles VALUES ('uid-a', 'A', 1, 1)");
-          db.execute('''
+        db.execute("INSERT INTO profiles VALUES ('uid-a', 'A', 1, 1)");
+        db.execute('''
           INSERT INTO stored_records (
             id, owner_uid, kind, visibility, payload_json,
             created_at_utc_ms, updated_at_utc_ms
           ) VALUES ('old', 'uid-a', 'task', 'private', '{}', 1, 1)
         ''');
-          db.execute('PRAGMA user_version = 1');
-        },
-      );
-      final upgraded = LifeDatabase.forTesting(executor);
-      addTearDown(upgraded.close);
+        db.execute('PRAGMA user_version = 1');
+      },
+    );
+    final upgraded = LifeDatabase.forTesting(executor);
+    addTearDown(upgraded.close);
 
-      final record = await (upgraded.select(
-        upgraded.storedRecords,
-      )..where((table) => table.id.equals('old'))).getSingle();
-      final version = await upgraded
-          .customSelect('PRAGMA user_version')
-          .getSingle();
-      expect(record.id, 'old');
-      expect(record.deletedAtUtcMs, isNull);
-      expect(version.data['user_version'], 3);
-      final historyTable = await upgraded
-          .customSelect(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activity_history'",
-          )
-          .getSingleOrNull();
-      expect(historyTable, isNotNull);
-    },
-  );
+    final record = await (upgraded.select(
+      upgraded.storedRecords,
+    )..where((table) => table.id.equals('old'))).getSingle();
+    final version = await upgraded
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(record.id, 'old');
+    expect(record.deletedAtUtcMs, isNull);
+    expect(version.data['user_version'], 4);
+    final historyTable = await upgraded
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activity_history'",
+        )
+        .getSingleOrNull();
+    expect(historyTable, isNotNull);
+    final trackingTable = await upgraded
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tracking_entries'",
+        )
+        .getSingleOrNull();
+    expect(trackingTable, isNotNull);
+  });
 
   test(
-    'version 2 database adds history table without changing stored rows',
+    'version 2 database upgrades to version 4 without changing stored rows',
     () async {
       await database.close();
       final executor = NativeDatabase.memory(
@@ -478,7 +481,13 @@ void main() {
           .getSingle();
       expect(record.payloadJson, '{"title":"legacy"}');
       expect(record.deletedAtUtcMs, isNull);
-      expect(version.data['user_version'], 3);
+      expect(version.data['user_version'], 4);
+      final trackingTable = await upgraded
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tracking_entries'",
+          )
+          .getSingleOrNull();
+      expect(trackingTable, isNotNull);
       await expectLater(
         upgraded
             .into(upgraded.activityHistory)
@@ -497,6 +506,82 @@ void main() {
             ),
         completes,
       );
+    },
+  );
+
+  test(
+    'version 3 migration preserves record tombstones and activity history',
+    () async {
+      await database.close();
+      final executor = NativeDatabase.memory(
+        setup: (db) {
+          db.execute('''CREATE TABLE profiles (
+          auth_uid TEXT NOT NULL PRIMARY KEY,
+          display_name TEXT NOT NULL,
+          created_at_utc_ms INTEGER NOT NULL,
+          updated_at_utc_ms INTEGER NOT NULL
+        )''');
+          db.execute('''CREATE TABLE stored_records (
+          id TEXT NOT NULL PRIMARY KEY,
+          owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid),
+          kind TEXT NOT NULL,
+          visibility TEXT NOT NULL,
+          payload_json TEXT NOT NULL,
+          created_at_utc_ms INTEGER NOT NULL,
+          updated_at_utc_ms INTEGER NOT NULL,
+          timezone_id TEXT,
+          sync_status TEXT NOT NULL DEFAULT 'localOnly',
+          revision INTEGER NOT NULL DEFAULT 1,
+          last_synced_at_utc_ms INTEGER,
+          remote_conflict_json TEXT,
+          deleted_at_utc_ms INTEGER
+        )''');
+          db.execute('''CREATE TABLE activity_history (
+          id TEXT NOT NULL PRIMARY KEY,
+          owner_uid TEXT NOT NULL REFERENCES profiles(auth_uid),
+          definition_id TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          occurrence_key TEXT NOT NULL,
+          local_date TEXT NOT NULL,
+          visibility TEXT NOT NULL,
+          payload_json TEXT NOT NULL,
+          recorded_at_utc_ms INTEGER NOT NULL,
+          UNIQUE (owner_uid, definition_id, kind, occurrence_key)
+        )''');
+          db.execute("INSERT INTO profiles VALUES ('uid-a', 'A', 1, 1)");
+          db.execute(
+            '''INSERT INTO stored_records
+          (id, owner_uid, kind, visibility, payload_json, created_at_utc_ms,
+           updated_at_utc_ms, revision, deleted_at_utc_ms)
+          VALUES ('preserved', 'uid-a', 'task', 'private', '{"title":"legacy"}', 1, 2, 7, 3)''',
+          );
+          db.execute('''INSERT INTO activity_history
+          VALUES ('event', 'uid-a', 'preserved', 'taskCompletion',
+                  '2026-10-14-600', '2026-10-14', 'private',
+                  '{"status":"done"}', 4)''');
+          db.execute('PRAGMA user_version = 3');
+        },
+      );
+      final upgraded = LifeDatabase.forTesting(executor);
+      addTearDown(upgraded.close);
+
+      final record = await (upgraded.select(
+        upgraded.storedRecords,
+      )..where((row) => row.id.equals('preserved'))).getSingle();
+      final history = await (upgraded.select(
+        upgraded.activityHistory,
+      )..where((row) => row.id.equals('event'))).getSingle();
+      final version = await upgraded
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+
+      expect(record.payloadJson, '{"title":"legacy"}');
+      expect(record.revision, 7);
+      expect(record.deletedAtUtcMs, 3);
+      expect(history.payloadJson, '{"status":"done"}');
+      expect(history.localDate, '2026-10-14');
+      expect(version.data['user_version'], 4);
+      expect(await upgraded.select(upgraded.trackingEntries).get(), isEmpty);
     },
   );
 }

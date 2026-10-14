@@ -9,7 +9,8 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 2 (authentication): App implementation complete; Firebase project activation and live integration verification are blocked on user setup.
 - Phase 3 (offline data architecture): Local foundation implemented; remote synchronization remains disabled.
 - Phase 4 (routines, tasks, goals, habits): Implemented with local-only persistence and tests.
-- Phase 5 and later: Not started.
+- Phase 5: Local data foundation, prayer tracking and notifications, fasting, sleep, workouts, and Home/Insights integration implemented; this milestone awaits review. Device-level notification checks remain.
+- Phases 6 and later: Not started.
 
 ## Completed
 
@@ -55,6 +56,15 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Limits: recurrence supports one-time, daily, weekdays, and selected weekly days; no flexible interval/monthly rules or notification scheduling. Dates use the device's local calendar date and scheduled wall-clock minute; travel/timezone-change policy remains undecided. Deletion is a local tombstone and never erases history. Archived definitions are hidden from active lists and are not yet restorable from an archive view.
 - Prayer, fasting, learning evidence, Screen Time, PDF export, AI planning, cloud sync, and server-enforced allowlisting remain unimplemented.
 
+### Phase 5 first milestone: local tracking data foundation
+
+- Increased the Drift schema to version 4 with an additive `tracking_entries` table for date-keyed prayer, fasting, sleep, and workout entries. Added partial unique indexes for active `(owner_uid, kind, local_date, entry_key)` values, the approved one-sleep-entry-per-owner/local-date rule, and owner/date/kind queries. Tombstoned keys may be recreated as new entries without restoring the old row.
+- Added strict tracking-entry validation for IDs, owner UID, real local dates, UTC timestamp order, revision values, kind-specific payloads, five named prayer keys, prayer schedule snapshots, fasting statuses, sleep/workout durations, and required workout activity.
+- Added an offline repository and Drift store bound to the current Auth UID. Streams switch/cancel on account changes; reads are owner-scoped or explicitly shared; only the owner may update/delete; writes use optimistic revisions and soft tombstones. No remote adapter or cloud write path was added.
+- Preserved existing Phase 2/3/4 structures and behavior. Migrations from v1, v2, and v3 now reach v4 sequentially; the v3 fixture confirms profile-linked record payload/revision/tombstone and activity history preservation. All migration/repository tests use in-memory SQLite.
+- Approved decisions reflected in the checklist: device-local timezone; 5-minute prayer reminders capped at 6 and stopped at Jamaat or completion; inexact notification with delay warning if exact-alarm access is unavailable; separate notification permission; one sleep entry per user per local wake-up date.
+- This milestone does not implement prayer schedules/UI, notifications/permissions/channels, fasting/sleep/workout UI, Home/Insights integration, or dependencies. Those remain pending user review.
+
 ## Blocked / external setup required
 
 - The generated Firebase Android options are present locally but ignored by Git. A new checkout must run `flutterfire configure --project <PROJECT_ID> --platforms android` before running/building the app.
@@ -67,8 +77,8 @@ Updated: 2026-10-14 (Asia/Dhaka)
 
 - Phase 2: Configure and verify the real Firebase project, Identity Platform restrictions, and the two accounts.
 - Phase 3 remaining: Design and test Firestore security rules before implementing any remote adapter or upload path. Local ownership checks are not a server security boundary.
-- Phase 4: Complete; awaiting user review before Phase 5.
-- Phase 5: Prayer, fasting, notifications, exercise, and sleep.
+- Phase 4: Complete; prior review accepted it for continued development.
+- Phase 5 remaining: Manual Android notification verification across supported Android versions/devices. Fasting and wellness are implemented locally in this milestone and await review.
 - Phase 6: Learning sessions and private evidence.
 - Phase 7: Android Screen Time collection and permission handling.
 - Phase 8: Shared progress, comparison, leaderboard, and analytics.
@@ -93,6 +103,47 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - `flutter test`: passed, 32 tests total (12 planning repository tests, 1 planning widget test, 13 record/database tests, and 6 existing auth/foundation widget tests).
 - `git diff --check`: passed; Git emitted only working-tree LF-to-CRLF normalization notices.
 - No Android build or live Firebase integration was run. No remote writes, account creation, Cloud Function deployment, billing change, or Firestore rule change was performed.
+
+### Phase 5 first-milestone verification
+
+- `dart run build_runner build`: passed; regenerated Drift database code for schema v4.
+- `dart format lib test`: passed; all 33 Dart files checked, no remaining formatting changes.
+- `flutter analyze`: passed with no issues.
+- `flutter test`: passed; 40 tests total, including 7 tracking repository tests and v1/v2/v3 migration coverage.
+- `git diff --check`: passed.
+- No notification dependency was installed, no Android/Firebase configuration was changed, and no production database was opened.
+
+### Phase 5 prayer UI and local tracking milestone
+
+- Added a typed manual prayer schedule for Fajr, Dhuhr, Asr, Maghrib, and Isha with separate Azan/Jamaat time editors, validation, private-by-default storage through the existing prayer record kind, and a revisioned local schedule record.
+- Added a prayer screen with device-local date selection, explicit Prayed on time / Prayed late / Missed choices, optional Jamaat status and notes, and an unrecorded state when no entry exists. The initial schedule must be configured manually; prayer times are not calculated.
+- Added an Android system-timezone method channel. Each new prayer entry saves a local date and a snapshot of that prayer's Azan/Jamaat minutes and current IANA timezone. Editing schedule values or timezone only affects future entries; existing snapshots and local dates remain unchanged.
+- Prayer schedule and dated entries use the active Firebase UID through the current local repositories. Records remain private and local-only; no Firestore writes or server-side enforcement were added.
+- Added repository tests for schedule validation/privacy, dated status writes, snapshot retention across schedule/timezone changes, unrecorded entries, malformed dates, and account isolation; added widget tests for setup empty state, prayer recording, and schedule validation.
+- No notification dependency, notification permission, channel, or alarm scheduling was added. Notifications are a separate milestone awaiting review of this prayer UI/data flow.
+
+### Phase 5 prayer notification milestone
+
+- Added `flutter_local_notifications` 22.3.2 and direct `timezone` 0.11.2 after checking compatibility with Flutter 3.41.2/Dart 3.11.0, Android SDK 36, AGP 8.11.1, Java 17 compile settings, and current plugin setup guidance. The existing Android system-timezone bridge remains the only device timezone source; `flutter_timezone` was not added.
+- Added a `PrayerReminderService` abstraction, local Android adapter, injectable clock/timezone/gateway boundary, and a Riverpod lifecycle controller. It initializes the timezone database, validates the returned IANA ID against the timezone database, and fails closed without scheduling on lookup errors; there is no UTC fallback.
+- Users opt into reminders in Prayer Settings, then explicitly tap the notification permission control. Notification posting permission and exact-alarm access are checked independently. If notification permission is denied, no reminders are scheduled. If notifications are allowed but exact-alarm access is unavailable, Android inexact-while-idle scheduling is used with a visible delay warning. `USE_EXACT_ALARM` is not declared.
+- Schedules use the device's current local timezone and a seven-local-day horizon. Each prayer session gets a stable deterministic ID for Azan, up to six five-minute reminders strictly before Jamaat, and one optional snooze. Past triggers are skipped. Completion, dismissal, disabled reminders, schedule edits, account changes, permission checks on resume, and detected date/timezone changes reconcile pending IDs. Dismissal, snooze-use, and notification-action disable state are stored in a separate private/local prayer-kind record bound to the Auth UID.
+- Added notification actions to snooze once, dismiss one prayer session, or turn off reminders. Completion records immediately cancel that prayer session's pending and active notifications. Startup clears stale managed notifications before scheduling only the currently authenticated UID's data; app resume and auth changes reconcile again. Android boot/package-replacement receivers restore the plugin-managed schedule.
+- Added `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, and `SCHEDULE_EXACT_ALARM`, scheduled-notification/action/boot receivers, and core library desugaring 2.1.5. AGP already matched the plugin's documented 8.11.1 minimum and Flutter resolves compile SDK 36. No `USE_EXACT_ALARM` declaration or Firebase configuration change was made. No database migration was needed: existing schedule payloads default the new opt-in setting to disabled, and suppression state uses the existing record envelope.
+- Automated tests cover notification denial vs exact access, inexact fallback and warning, stable IDs/idempotence, past triggers and Jamaat cutoff, completion and dismissal, schedule edits, permission revocation, timezone changes/failures, account switching, snooze/disable actions, and resume reconciliation. These fake-gateway tests do not prove Android delivery.
+- Limitations: notification delivery can be late or suppressed by Doze, force-stop, user settings, or OEM battery controls. Boot recovery, permission prompts, exact-alarm settings, channel preferences, and timezone/date changes still need manual Android device/emulator verification. The app does not claim a scheduled notification was delivered. Remote synchronization and server-side two-account enforcement remain unimplemented.
+- Verification: `dart format lib test` passed (47 Dart files); `flutter analyze` passed; `flutter test` passed (70 tests); `flutter build apk --debug` passed; `git diff --check` passed. The first build attempt hit corrupted cached 2.1.4 desugaring artifacts; after switching to compatible 2.1.5 and refreshing Gradle dependencies, the APK build succeeded. No project clean, device install, notification prompt, account operation, Firebase change, or commit was performed.
+
+### Phase 5 fasting and wellness milestone
+
+- Added fasting records with date-specific Fasted/Not fasted values, optional notes, an explicit unrecorded state, history, revision-checked edits, and tombstone deletion.
+- Added one sleep-duration record per authenticated UID and local wake-up date, 1–1440 minute validation, optional notes, revision-checked edits, and safe tombstone deletion. Local dates are retained as entered; timezone changes do not rewrite history.
+- Added workout logging with activity, 1–1440 minute duration, optional notes, date selection, multiple entries per date, editing, history, and tombstone deletion.
+- Added dedicated Fasting and Wellness routes outside the five primary navigation destinations. Home shows current-day fasting/sleep/workout summaries and Insights shows recent recorded fasting, sleep, and workout summaries. Unrecorded fasting dates are not counted as missed.
+- All features reuse schema v4 and the authenticated UID-bound local repository. Records default to private; no remote write or synchronization path was added. Repository ownership/visibility checks remain application safeguards, not a server security boundary.
+- Workflow tests cover local-date handling, historical-date preservation during edits, private defaults, unrecorded dates, multiple workouts, deletion, and signed-out failure. Widget tests cover fasting recording, sleep validation, local saving, and multiple workout entries. Migration/schema and account-isolation behavior continue to be covered by the existing tracking repository tests using in-memory SQLite.
+- Limitations: dates are manually selected using the device's current local calendar; sleep stores a single total duration per wake-up date and no stages. Home and Insights summaries use owned records only. Android notification delivery still requires the manual device checks listed in `docs/PRAYER_NOTIFICATION_SMOKE_TEST.md`.
+- Verification: `dart format lib test` passed (53 Dart files; 2 reformatted); `flutter analyze` passed with no issues; `flutter test` passed (76 tests); `flutter build apk --debug` passed. `git diff --check` is run after the final documentation edit.
 
 ## Scope boundary
 

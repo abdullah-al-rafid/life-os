@@ -7,6 +7,9 @@ import 'package:life_os/app/app.dart';
 import 'package:life_os/features/auth/domain/auth_repository.dart';
 import 'package:life_os/features/auth/domain/auth_user.dart';
 import 'package:life_os/features/auth/presentation/auth_providers.dart';
+import 'package:life_os/features/records/domain/life_record_repository.dart';
+import 'package:life_os/features/records/presentation/record_providers.dart';
+import 'package:life_os/features/tracking/domain/tracking_entry.dart';
 
 void main() {
   testWidgets('missing Firebase setup fails closed behind the setup screen', (
@@ -137,9 +140,31 @@ const _testUser = AuthUser(
 );
 
 Widget _app(FakeAuthRepository repository) => ProviderScope(
-  overrides: [authRepositoryProvider.overrideWithValue(repository)],
+  overrides: [
+    authRepositoryProvider.overrideWithValue(repository),
+    currentUserIdentityProvider.overrideWithValue(_FakeIdentity()),
+    trackingEntriesProvider((
+      TrackingEntryKind.fasting,
+      null,
+    )).overrideWith((ref) => Stream.value(<TrackingEntry>[])),
+    trackingEntriesProvider((
+      TrackingEntryKind.sleep,
+      null,
+    )).overrideWith((ref) => Stream.value(<TrackingEntry>[])),
+    trackingEntriesProvider((
+      TrackingEntryKind.workout,
+      null,
+    )).overrideWith((ref) => Stream.value(<TrackingEntry>[])),
+  ],
   child: const LifeOsApp(),
 );
+
+class _FakeIdentity implements CurrentUserIdentity {
+  @override
+  String? currentUid = 'test-user';
+  @override
+  Stream<String?> get uidChanges => Stream.value(currentUid);
+}
 
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthUser? initialUser}) : _user = initialUser;
