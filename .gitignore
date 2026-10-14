@@ -32,6 +32,12 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.env.*
+!.env.example
+
+# FlutterFire client configuration is generated locally and contains API keys.
+/lib/firebase_options.dart
+/android/app/google-services.json
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +49,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+node_modules/

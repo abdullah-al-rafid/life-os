@@ -1,0 +1,15 @@
+{
+  "name": "life-os-auth-functions",
+  "private": true,
+  "description": "Server-side allowlist for LIFE OS account creation",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "firebase-functions": "^7.4.0"
+  }
+}
