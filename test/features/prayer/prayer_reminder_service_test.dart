@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'package:life_os/features/prayer/domain/prayer_models.dart';
 import 'package:life_os/features/prayer/domain/prayer_reminder_service.dart';
 import 'package:life_os/features/prayer/domain/prayer_repository.dart';
@@ -105,7 +106,9 @@ void main() {
 
     test('skips past times and stops reminders at Jamaat', () async {
       final fixture = ReminderFixture()
-        ..now = DateTime(2026, 10, 14, 5, 12)
+        // 05:12 in Asia/Dhaka, expressed as a UTC instant so the test does not
+        // depend on the host machine's timezone.
+        ..now = DateTime.utc(2026, 10, 13, 23, 12)
         ..repository.schedule = fixtureSchedule(jamaatMinute: 320);
       await fixture.start();
       final requests = fixture.gateway.scheduled.values
@@ -240,6 +243,10 @@ void main() {
         );
         await fixture.service.dismissSession(action);
         expect(
+          fixture.storedPreferences['user-a']?.dismissed,
+          contains('${fixture.todayKey}_fajr'),
+        );
+        expect(
           fixture.gateway.scheduled.values.any(
             (request) =>
                 request.localDate == fixture.todayKey &&
@@ -254,7 +261,8 @@ void main() {
           prayer: PrayerName.dhuhr,
           action: 'snooze',
         );
-        fixture.now = DateTime(2026, 10, 14, 5, 1);
+        // 05:01 in Asia/Dhaka, expressed as a UTC instant.
+        fixture.now = DateTime.utc(2026, 10, 13, 23, 1);
         await fixture.service.snoozeSession(dhuhr);
         await fixture.service.snoozeSession(dhuhr);
         final snoozes = fixture.gateway.scheduled.values.where(
@@ -291,7 +299,9 @@ class ReminderFixture {
   final repository = FakePrayerRepository();
   final gateway = FakeGateway();
   final storedPreferences = <String, PrayerReminderPreferences>{};
-  DateTime now = DateTime(2026, 10, 14, 4);
+  // 04:00 in Asia/Dhaka, expressed as a UTC instant. CI runners and developer
+  // machines can have different local timezones.
+  DateTime now = DateTime.utc(2026, 10, 13, 22);
   String timezone = 'Asia/Dhaka';
   bool timezoneFailure = false;
   late final service = LocalPrayerReminderService(
@@ -312,7 +322,10 @@ class ReminderFixture {
     repository.schedule = fixtureSchedule();
   }
 
-  String get todayKey => prayerDateKey(now);
+  String get todayKey {
+    final localNow = tz.TZDateTime.from(now, tz.getLocation(timezone));
+    return prayerDateKey(DateTime(localNow.year, localNow.month, localNow.day));
+  }
 
   Future<void> start() async {
     await service.start();
