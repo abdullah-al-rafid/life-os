@@ -282,7 +282,10 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
     String action,
   ) async {
     try {
-      if (action == 'edit') return _edit(context, ref, item);
+      if (action == 'edit') {
+        await _edit(context, ref, item);
+        return;
+      }
       if (action == 'archive') {
         await ref
             .read(planningRepositoryProvider)

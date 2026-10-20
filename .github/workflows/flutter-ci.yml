@@ -26,6 +26,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create CI-only Firebase options stub
+        shell: bash
+        run: |
+          # This ignored placeholder exists only for static analysis and unit tests.
+          # It intentionally cannot initialize Firebase. Connected builds must use
+          # locally generated FlutterFire options and are not validated by this job.
+          cat > lib/firebase_options.dart <<'EOF'
+          import 'package:firebase_core/firebase_core.dart';
+
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform => throw UnsupportedError(
+                  'Firebase is not configured in CI. Generate local FlutterFire options for a connected build.',
+                );
+          }
+          EOF
+
       - name: Analyze
         run: flutter analyze
 
