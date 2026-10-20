@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../planning/domain/planning_repository.dart';
 import '../../records/presentation/record_providers.dart';
@@ -115,14 +116,16 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    const Row(
+                    const Wrap(
+                      spacing: 7,
+                      runSpacing: AppSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(
                           Icons.cloud_off_outlined,
                           color: AppColors.purple,
                           size: 17,
                         ),
-                        SizedBox(width: 7),
                         Text(
                           'Offline ready · Saved on this device · Cloud sync off',
                           style: TextStyle(
@@ -296,41 +299,22 @@ class HomeScreen extends ConsumerWidget {
                         item.id,
                         todayKey,
                       );
-                      return SurfaceCard(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.circle_outlined,
-                                  color: AppColors.cyan,
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Text(
-                                    item.title,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
-                                  ),
-                                ),
-                                if (item.visibility.name == 'shared')
-                                  const Chip(label: Text('Shared · local')),
-                              ],
-                            ),
-                            Text(
-                              '${item.scheduledDate != null && item.scheduledDate!.compareTo(todayKey) < 0 ? 'Overdue · ' : ''}${item.kind.name} · Priority ${item.priority} · ${item.durationMinutes} min${item.targetDate == null ? '' : ' · Deadline ${item.targetDate}'}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            if (completion != null)
-                              Text(
-                                'Today: ${completion.name}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            if (item.kind != PlanningKind.goal)
-                              Wrap(
+                      return TaskCard(
+                        title: item.title,
+                        subtitle:
+                            '${item.scheduledDate != null && item.scheduledDate!.compareTo(todayKey) < 0 ? 'Overdue · ' : ''}${item.kind.name} · Priority ${item.priority} · ${item.durationMinutes} min${item.targetDate == null ? '' : ' · Deadline ${item.targetDate}'}',
+                        details: completion == null
+                            ? null
+                            : 'Today: ${completion.name}',
+                        source: item.visibility.name == 'shared'
+                            ? PrivacySource.shared
+                            : PrivacySource.privateLocal,
+                        sourceDetails: item.visibility.name == 'shared'
+                            ? 'on this device'
+                            : null,
+                        content: item.kind == PlanningKind.goal
+                            ? null
+                            : Wrap(
                                 spacing: 2,
                                 children: [
                                   _QuickCompletionButton(
@@ -353,8 +337,6 @@ class HomeScreen extends ConsumerWidget {
                                   ),
                                 ],
                               ),
-                          ],
-                        ),
                       );
                     },
                   ),

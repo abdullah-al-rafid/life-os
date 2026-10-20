@@ -98,6 +98,25 @@ class TaskPlanImports extends Table {
   ];
 }
 
+/// Durable queue for one explicitly shared assignment awaiting server
+/// confirmation. It contains only the task fields intended for sharing.
+/// There is deliberately no foreign key to Profiles so auth/profile cleanup
+/// cannot cascade-delete an in-flight assignment.
+class SharedTaskAssignmentOutbox extends Table {
+  TextColumn get ownerUid => text()();
+  TextColumn get idempotencyKey => text()();
+  TextColumn get title => text()();
+  TextColumn get date => text()();
+  IntColumn get priority => integer()();
+  IntColumn get durationMinutes => integer()();
+  TextColumn get deadline => text().nullable()();
+  TextColumn get notes => text()();
+  IntColumn get queuedAtUtcMs => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {ownerUid};
+}
+
 @DriftDatabase(
   tables: [
     Profiles,
@@ -105,6 +124,7 @@ class TaskPlanImports extends Table {
     ActivityHistory,
     TrackingEntries,
     TaskPlanImports,
+    SharedTaskAssignmentOutbox,
   ],
 )
 class LifeDatabase extends _$LifeDatabase {
@@ -113,7 +133,7 @@ class LifeDatabase extends _$LifeDatabase {
   LifeDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -134,6 +154,9 @@ class LifeDatabase extends _$LifeDatabase {
       }
       if (from < 5) {
         await m.createTable(taskPlanImports);
+      }
+      if (from < 6) {
+        await m.createTable(sharedTaskAssignmentOutbox);
       }
     },
     beforeOpen: (details) async {

@@ -1,6 +1,6 @@
 # LIFE OS Phase 6 — Secure Cloud Sync and Two-Account Access Control
 
-Status: planning only. No application code, Firebase configuration, rules, billing, dependencies, database, or commits were changed.
+Status: historical implementation plan. The current working tree now contains a separately gated assigned-task Firestore adapter, local default-deny rules, and emulator test source. This document is not evidence that production rules are deployed or cross-device sync is verified.
 
 Reviewed checkpoint: `a82044b98d593943d7b926c0ee5d846101ab5e6a`.
 
@@ -10,7 +10,7 @@ Add server-enforced access control and explicit, offline-first Firestore synchro
 
 The app's current local UID and visibility checks are useful safeguards, but they are not authorization boundaries. Only Firebase Authentication and server-side policy can protect remote data from a modified client. No project UID, email allowlist, project ID, or credential is assumed in this plan.
 
-## Current project findings
+## Current project findings at the planning checkpoint (historical)
 
 - At the start of this planning turn, Git HEAD matched the supplied checkpoint and `docs/PHASE6_PLAN.md` was the sole existing untracked file; no other changes were present.
 - Firebase email/password auth is implemented through `FirebaseAuthRepository`; routing observes Firebase Auth state. No client registration screen exists. App session persistence uses the Firebase SDK.
@@ -331,4 +331,8 @@ Planning only. No application code, Firebase config, Firestore rules/indexes, ac
 
 The File-to-15-Day Task Planner (Phase 7) has since been implemented locally. Home and Plan expose direct import entry points; Home lists all due/overdue items and supports quick completion while retaining scheduled dates and historical completion records. A first approval-only rolling carryover proposal has also been added as a partial Phase 12 implementation. It uses prior imported task records and the schema-v5 atomic import receipt; it does not cover goal/deadline analysis, full routine workload constraints, or complete prior-version comparison. No automatic plan activation occurs. Task completion supports local private evidence attachments as a partial Phase 8 slice, and Android has a Usage Access query/UI as a partial Phase 9 slice. Neither has device-level verification.
 
-The remaining implementation is full Learning sessions/evidence lifecycle (Phase 8), Reports/Export (Phase 11), full adaptive planning (Phase 12), device verification for Android Screen Time (Phase 9), and Secure Cloud Sync (Phase 6). The roadmap's dependency labels remain authoritative: cloud sync requires trusted verified UIDs, reviewed Firestore rules, emulator security tests, and a separately approved rollout before remote writes. No such rules/UID inputs are present, so production sync remains disabled. PDF/JSON reports and full learning sessions are not implemented.
+The File-to-15-Day Task Planner has since been implemented locally. Task completion supports local private evidence attachments as a partial slice, and Android has a Usage Access query/UI as a partial slice; neither is a full learning workflow or device-verified Screen Time sharing feature. Reports/PDF/JSON remain unimplemented, and adaptive planning is a partial approval-only carryover proposal.
+
+Current sync boundary: general personal records remain local-only. The Firestore adapter and rules cover assigned tasks only; the feature flag defaults off. Emulator tests use synthetic identities. Production identity/membership state, deployed rules, and two-device synchronization have not been verified from this repository. Do not treat the old planning findings below as current implementation facts. Keep production writes disabled until trusted identity and membership verification, rules review/deployment approval, and live authorization tests are complete.
+
+Planning and reporting periods are 15 days. The app imports a ChatGPT-prepared CSV/XLSX locally with a full preview and explicit approval; it does not generate or silently replace plans using AI.

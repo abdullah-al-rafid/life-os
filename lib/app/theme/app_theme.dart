@@ -8,7 +8,7 @@ abstract final class AppTheme {
       primary: AppColors.cyan,
       secondary: AppColors.purple,
       surface: AppColors.surface,
-      error: Color(0xFFFF7D91),
+      error: AppColors.error,
       onPrimary: AppColors.canvas,
       onSecondary: AppColors.canvas,
       onSurface: AppColors.textPrimary,

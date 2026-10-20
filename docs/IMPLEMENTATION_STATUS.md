@@ -1,6 +1,6 @@
 # LIFE OS Implementation Status
 
-Updated: 2026-10-14 (Asia/Dhaka)
+Updated: 2026-10-20 (Asia/Dhaka)
 
 ## Current status
 
@@ -10,12 +10,12 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 3 (offline data architecture): Local foundation implemented; remote synchronization remains disabled.
 - Phase 4 (routines, tasks, goals, habits): Implemented with local-only persistence and tests.
 - Phase 5: Local data foundation, prayer tracking and notifications, fasting, sleep, workouts, and Home/Insights integration implemented; this milestone awaits review. Device-level notification checks remain.
-- Phase 6 (secure cloud sync): Planning is documented; no Firestore rules, adapter, or remote writes are implemented.
-- Phase 7 (File-to-15-Day Task Planner): Local implementation is present; import is directly reachable from Home and Plan. Final verification is in progress.
+- Phase 6 (assigned-task remote projection): adapter, local default-deny rules, and emulator tests are present. The local Firestore Emulator suite passed 11/11 tests against `demo-life-os` with synthetic identities on 2026-10-20; production rules, membership state, and cross-device behavior remain unverified. General record sync remains disabled.
+- Phase 7 (File-to-15-Day Task Planner): Local implementation and tests pass; import is directly reachable from Home and Plan. Actual file-picker behavior still needs device verification.
 - Phase 8 (Learning and Private Evidence): local task-completion attachments are implemented as a limited first slice; full learning-session workflows and camera capture remain incomplete.
 - Phase 9 (Android Screen Time): local Usage Access query and date-filter UI are implemented; device verification remains.
-- Phase 11 (Reports/Export): Not implemented.
-- Phase 12 (Adaptive Planning): approval-only carryover proposal implemented as a partial slice; full adaptive analysis remains incomplete.
+- Phase 11 (Reports/Export): local 15-day PDF preview/save/print/share and account-scoped JSON backup/restore are implemented and covered by tests; device-level export and restore review remains.
+- Phase 12 (15-day Adaptive Planning): approval-only carryover proposal implemented as a partial slice; full adaptive analysis remains incomplete.
 
 ## Completed
 
@@ -45,8 +45,8 @@ Updated: 2026-10-14 (Asia/Dhaka)
 
 ## In progress
 
-- Phase 6 secure cloud sync remains planning only. No Firestore reads or writes are implemented.
-- Remaining-feature work: approval-only rolling carryover proposals, local task evidence, and Android Usage Access query/UI have partial implementations. Reports/export remain unimplemented; secure cloud sync remains blocked as noted below.
+- General record synchronization remains disabled and local-only. A separate Firestore adapter exists for assigned tasks only; its UI feature flag defaults off, and production rules/membership state and cross-device behavior have not been verified from this workspace.
+- Remaining-feature work: approval-only rolling carryover proposals, local task evidence, and Android Usage Access query/UI have partial implementations. Reports and local backup/export are implemented; secure cloud sync remains blocked as noted below.
 
 ### Rolling plan proposal slice (partial)
 
@@ -60,15 +60,22 @@ Updated: 2026-10-14 (Asia/Dhaka)
 ### Learning evidence and Android Screen Time (partial)
 
 - Task completion accepts up to five optional local evidence files from the gallery/file picker: JPEG, PNG, WebP, PDF, TXT, and DOCX, up to 10 MB each. Extensions and basic file signatures/text encoding are checked. Bytes are stored in the app-private support directory under the active Auth UID. Completion history keeps relative keys, names, sizes, and timestamps; evidence-bearing events are private even if their task is shared. A failed history write removes files written by that attempt.
-- Selected image previews are shown before saving, and attachment names appear in local completion history. Evidence is not uploaded; Android cloud/device backup extraction rules exclude the evidence directory. Direct camera capture, history-time file preview, explicit evidence retention UI, and evidence cleanup after task deletion are not implemented. Local evidence and the SQLite DB are not encrypted; the database backup policy remains unresolved.
+- Selected image previews are shown before saving, and attachment names appear in local completion history. Evidence is not uploaded; Android cloud/device backup extraction rules exclude the evidence directory. The app does not explicitly disable Android Auto Backup, so the local SQLite database may be included in system backups; review this policy before storing real sensitive records. Direct camera capture, history-time file preview, explicit evidence retention UI, and evidence cleanup after task deletion are not implemented. Local evidence and the SQLite DB are not app-level encrypted.
 - Android Screen Time uses a native `UsageStatsManager` bridge. It explains the special Usage Access setting, opens Android settings, checks authorization before querying, refreshes on resume, and groups foreground time by app for a chosen local date. Denied access and empty/unavailable data are shown distinctly. It is Android-only and has not been manually verified on a device/emulator. Usage summaries are queried on demand, not persisted.
 
 ### Remaining required features and blockers
 
 - Learning sessions are not implemented. Evidence attachment support is limited to task completion and has no camera capture or history preview. No evidence is uploaded.
-- Reports, PDF export, and validated JSON export/import are not implemented.
+- Local 15-day PDF reports and account-scoped JSON backup/restore are implemented. The backup excludes evidence file contents and remote assigned tasks; it is not a complete device or cloud recovery system. Review restore behavior and exported personal data before relying on or sharing these files.
 - Android Screen Time code is implemented, but Usage Access has not been granted or tested on device; no real usage output is claimed.
-- Secure Cloud Sync remains disabled. The approved plan requires trusted administrator-verified UIDs, default-deny Firestore Rules and emulator tests before any remote writes. Those project identifiers/rules are not available in this workspace; no allowlist, rules, adapter, billing, or deployment has been invented or enabled.
+- General Cloud Sync remains disabled. The local `firestore.rules` and assigned-task adapter are present. The Firestore Emulator suite passed 11/11 tests against `demo-life-os` with synthetic identities on 2026-10-20; this does not establish deployed production rules, production membership, or live synchronization. Do not enable the assigned-task build flag or production writes until trusted identities/memberships and deployed rules are independently verified and live access tests pass.
+
+### Audit verification (2026-10-20)
+
+- Flutter 3.41.2 / Dart 3.11.0: `flutter analyze` passed with no issues; `flutter test` passed (153 tests); `flutter build apk --release` succeeded (76.2 MB APK).
+- Cloud Functions allowlist tests: 3/3 passed with both direct Node execution and `npm test --prefix functions`.
+- Firestore Rules emulator tests: 11/11 passed with Java 25 and the explicitly isolated `demo-life-os` project. The emulator used synthetic test identities; no production service was targeted.
+- No device install, live Firebase authentication, production rules deployment, production membership provisioning, or cross-device synchronization test was performed.
 
 ## Completed implementation details
 
@@ -115,12 +122,12 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Phase 3 remaining: Design and test Firestore security rules before implementing any remote adapter or upload path. Local ownership checks are not a server security boundary.
 - Phase 4: Complete; prior review accepted it for continued development.
 - Phase 5 remaining: Manual Android notification verification across supported Android versions/devices. Fasting and wellness are implemented locally in this milestone and await review.
-- Phase 6: Secure Cloud Sync and server-enforced two-account data authorization; rules and emulator tests must precede any remote writes.
-- Phase 7: File-to-15-Day Task Planner; implemented locally and awaiting review and final verification.
+- Phase 6: Assigned-task Firestore projection exists behind a default-off flag. Production verification is outstanding; general sync is not implemented.
+- Phase 7: File-to-15-Day Task Planner; local tests pass; platform file-picker behavior still needs device verification.
 - Phase 8: Learning sessions and full private evidence lifecycle; task-completion attachments are a partial first slice.
 - Phase 9: Android Screen Time is implemented locally; device verification and any history persistence remain.
 - Phase 10: Shared progress, comparison, leaderboard, and analytics.
-- Phase 11: Reports, PDF preview, device save/share, and JSON export/import remain unimplemented.
+- Phase 11: Local PDF preview/save/print/share and JSON backup/restore are implemented and tested; manual device behavior and restore review remain.
 - Phase 12: Approval-based rolling carryover exists as a partial proposal; goal/deadline/workload analysis and plan-version comparison remain.
 - Phase 13: End-to-end, accessibility, performance, security, and release validation.
 
@@ -129,15 +136,50 @@ Updated: 2026-10-14 (Asia/Dhaka)
 - Improved Home and Plan discoverability for the existing local importer and clarified local-only sharing. Home shows all due items and exposes same-day completion actions; overdue completion is recorded on the completion date without moving the task's scheduled date.
 - This update does not implement the remaining report/PDF/JSON workflow, complete adaptive analysis, full learning evidence lifecycle, or secure cloud sync. Screen Time and notification delivery still need real-device verification. The cloud-sync blocker remains the absence of administrator-verified trusted UIDs and reviewed/tested Firestore rules; remote writes remain disabled.
 
-## Verification results
+### Assigned-task Firestore security follow-through (2026-10-15)
+
+- Added a separately gated Firestore task projection, self-only membership reads with reciprocal trusted-peer checks, default-deny rules, and emulator tests for assigned updates, private-data isolation, unapproved users, and forged ownership. General local records and evidence remain local; Screen Time upload is out of scope.
+- Both real Auth identities and production memberships could not be verified from the local project context. Production writes remain off; emulator tests use synthetic identities only. The feature flag defaults to false.
+- Emulator verification: `firebase emulators:exec --project demo-life-os --only firestore "npm --prefix security-tests test"` (4 passed). Flutter focused planning/tracking/usage tests passed (40); `flutter analyze` and `git diff --check` passed; debug APK built.
+- Do not enable the sharing flag until a trusted administrator verifies both users in project `life-os-abdullah-jannat`, provisions reciprocal active `lifeOsMembers/{uid}` documents, reviews the emulator-tested rules, and deployment is separately approved. No production rules were deployed in this work.
+
+### Real two-device Cloud Sync phase: preparation (2026-10-15)
+
+- Identity setup remains unverified. The app uses Firebase email/password sign-in and has no account creation flow. No trusted administrator evidence, authenticated session, or Firebase Console inventory was available to establish which Auth identities belong to Abdullah and Jannat. No UID values are recorded here or shown in the UI. The configured project ID is local configuration only and does not prove project ownership or live project state.
+- The only remote data slice remains explicitly assigned tasks behind `LIFE_OS_ENABLE_SHARED_TASKS`, whose default is false. This is a direct Firestore projection, not a durable offline outbox: no retry/idempotency queue, local remote-task cache, or conflict merge is implemented. Do not describe it as verified cross-device sync.
+- Expanded emulator rule tests cover revoked-task access, deactivated membership, invalid date/duration/notes, forged timestamps, immutable owner, invalid recipient changes, and extra fields. Emulator results are synthetic-identity authorization evidence only; they do not establish deployed production rules or device behavior.
+- Personal routines/tasks, private goals and contributions, prayer, fasting, wellness, completion history/evidence, Screen Time, and JSON backup remain local. Existing JSON backup/restore code and data format were not changed.
+- Before any production rollout: a trusted administrator must verify both intended Auth accounts in the exact Firebase project and provision reciprocal membership; the owner must review and separately approve the exact rules deployment and production enablement. Current phase does neither. Other open decisions include the recipient-cache purge/revocation UX while offline, durable retry/idempotency/conflict policy before claiming offline-first sync, local database encryption and device backup retention, and whether non-approved users should be blocked at sign-in.
+
+#### Safe two-device test plan (after separate rules review/deployment approval)
+
+1. Use two physical Android installations and two already-provisioned test Auth accounts verified by an administrator against the intended Firebase project. Record only aliases A/B, device/app versions, and timestamps; never record passwords, emails, or raw UIDs.
+2. Confirm the sharing flag remains off and each device can sign in/out and retains its own local tasks, routines, goals, prayer/wellness records, Screen Time behavior, and JSON export/preview/restore workflow. Do not restore over existing data; use a fresh test profile/install only if the owner has approved that setup.
+3. After the exact production rules and reciprocal memberships have been separately approved and deployed, build a test-only app with assigned-task sharing enabled. A assigns one non-sensitive test task to B; verify B sees it and can update only status, while A sees that status update. Verify unrelated account C cannot read or write it and private local records never appear remotely.
+4. Revoke the task and separately deactivate B membership; verify fresh reads/writes are denied. Note that already downloaded data cannot be recalled while B is offline; reconnect before checking app-side cache behavior. Stop if the implementation has no documented, tested cache purge behavior.
+5. Exercise airplane mode/reconnect, repeated submission, app termination, and sign-out/account switch only after a durable retry/cache design exists. Verify no work queued under A is sent as B and no local record is deleted or relabeled. Current adapter lacks those guarantees, so this phase must not claim those checks passed.
+
+### Current-state clarification (2026-10-15)
+
+- The assigned-task Firestore adapter is separate from the Drift-backed personal record repository. General tasks, routines, goals, habits, completion history, prayer, fasting, wellness, evidence, and Screen Time remain local; Screen Time is queried on demand and is not uploaded.
+- At the time of this earlier UI foundation checkpoint, the four emulator security tests and focused Flutter checks above were historical results and were not rerun during that work. The current 11-test emulator and Flutter results are recorded in “Audit verification (2026-10-20)” above. Emulator identities remain synthetic and do not verify production rules or two-phone behavior.
+- Plan and report periods are 15 days. The application imports a user-prepared CSV/XLSX locally and requires review and explicit approval; it does not silently generate or replace plans with AI.
+
+### App-wide UI foundation (initial)
+
+- Added reusable scroll-safe page/header, task/status, privacy/source, workload/progress, and shared component tests under `lib/core/widgets/life_os_components.dart`. Empty states now scroll safely when a screen has little remaining height.
+- Primary navigation now includes Home, Plan, Goals, Together, Progress, and Settings. Existing `/insights` and `/plan/assigned` paths remain; prayer, fasting, wellness, Screen Time, import, and rolling-plan routes remain accessible.
+- Shared task cards/status controls now appear in Home and the assigned-task view; shared source labels appear in Plan, Prayer, Fasting, Wellness, Screen Time, and Together. Rolling proposals use the workload indicator. This is an incremental UI foundation, not a completed app-wide redesign. Repository and storage behavior are unchanged.
+
+## Earlier verification results (historical phase checkpoint)
 
 - `dart format lib test`: Phase 4 run recorded below.
 - `flutter analyze`: Phase 4 run recorded below.
 - `flutter test`: Phase 4 run recorded below.
 - `npm test --prefix functions`: 3 allowlist unit tests passed.
 - `node --check functions/index.js`: passed.
-- Live Firebase sign-in/emulator integration: not run. No account creation, auth-provider change, Cloud Functions deployment, or security-rule change was performed.
-- Android build: not run in this audit. Android SDK licenses were reported accepted by `flutter doctor -v` during Firebase configuration verification.
+- Live Firebase sign-in: not run. The local Firestore Emulator result is recorded above. No account creation, auth-provider change, Cloud Functions deployment, or production security-rule deployment was performed.
+- Android build: not run at that historical checkpoint. The current release APK build is recorded in “Audit verification (2026-10-20)” above. Android SDK licenses were reported accepted by `flutter doctor -v` during Firebase configuration verification.
 
 ### Phase 4 verification
 
@@ -190,6 +232,8 @@ Updated: 2026-10-14 (Asia/Dhaka)
 
 ## Scope boundary
 
+The entries below are historical snapshots from the Phase 2/3 implementation dates. They describe the repository at that checkpoint; the current state is summarized at the top of this file and in “Current-state clarification.”
+
 Phase 2 establishes authentication only. Firestore profiles, data ownership rules, synchronization, and cross-device records are not implemented. No Firestore rules were created or changed. The app must not be described as synchronized or complete until later phases implement and verify those behaviors.
 
 ### Phase 3 local persistence
@@ -214,7 +258,7 @@ Phase 2 establishes authentication only. Firestore profiles, data ownership rule
 - Conflict snapshots retain remote kind, visibility, payload, timestamps, timezone, revision, and deletion metadata. Matching snapshots clear conflict state; divergent snapshots remain marked conflict.
 - Repository sync remains unconditionally disabled; local writes force `localOnly`. The remote-store interface is only a contract and has no implementation.
 - Drift database ownership is scoped to a Riverpod provider container, which invokes asynchronous close on disposal. A provider lifecycle test verifies close is initiated.
-- The SQLite file is in Android app-specific internal storage (`filesDir`). The manifest currently omits `allowBackup` and backup rules; Android Auto Backup defaults to enabled and includes most app-internal files, so the DB may be backed up to cloud/device transfer on eligible devices. Choose and test a backup/restore policy before real records are collected.
+- The SQLite file is in Android app-specific internal storage (`filesDir`). The manifest configures full and data-extraction backup rules, but those rules exclude only the evidence directory; `allowBackup` is omitted, which defaults to enabled. The DB may therefore be included in cloud/device transfer backups on eligible devices. Choose and test a backup/restore policy before real records are collected.
 - Android's app sandbox limits access from other ordinary apps, and platform storage encryption depends on Android version/device configuration. Given the intended personal data, app-level database encryption is recommended before real sensitive records are collected if unlocked-device, backup, rooted-device, or storage-extraction risks are in scope. Key management, backup/recovery behavior, and an app-lock threat model are not implemented.
 - At the Phase 3 hardening review, no schema change was required; the schema was version 2 and the version 1 to 2 migration passed. Phase 4 later added version 3 as documented above.
 - Final Flutter test suite: 18 tests passed (12 data-layer tests and 6 existing widget tests), including auth UID switching/sign-out, unauthenticated access, malformed fields, ownership, tombstones, conflict transitions, provider close, and versioned migration.

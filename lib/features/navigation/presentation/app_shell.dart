@@ -7,13 +7,28 @@ enum AppSection {
   home('Home', '/', Icons.grid_view_rounded),
   plan('Plan', '/plan', Icons.calendar_month_rounded),
   goals('Goals', '/goals', Icons.flag_rounded),
-  insights('Insights', '/insights', Icons.insights_rounded),
+  together('Together', '/together', Icons.people_alt_outlined),
+  progress('Progress', '/progress', Icons.insights_rounded),
   settings('Settings', '/settings', Icons.tune_rounded);
 
   const AppSection(this.label, this.path, this.icon);
   final String label;
   final String path;
   final IconData icon;
+
+  bool matches(String path) {
+    if (this == home) {
+      return path == '/' ||
+          path.startsWith('/prayer') ||
+          path == '/fasting' ||
+          path == '/wellness' ||
+          path == '/screen-time';
+    }
+    if (this == together && path == '/plan/assigned') return true;
+    if (this == plan && path == '/plan/assigned') return false;
+    if (this == progress && path == '/insights') return true;
+    return path == this.path || path.startsWith('${this.path}/');
+  }
 }
 
 class AppShell extends StatelessWidget {
@@ -22,8 +37,9 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final path = GoRouterState.of(context).uri.path;
     final selected = AppSection.values.indexWhere(
-      (section) => section.path == GoRouterState.of(context).uri.path,
+      (section) => section.matches(path),
     );
     final index = selected < 0 ? 0 : selected;
     return LayoutBuilder(
@@ -87,15 +103,17 @@ class _SideNavigation extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        for (var i = 0; i < AppSection.values.length; i++)
-          _NavigationItem(
-            section: AppSection.values[i],
-            selected: i == selectedIndex,
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              for (var i = 0; i < AppSection.values.length; i++)
+                _NavigationItem(
+                  section: AppSection.values[i],
+                  selected: i == selectedIndex,
+                ),
+            ],
           ),
-        const Spacer(),
-        const Text(
-          'A calmer way to move forward.',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
         ),
       ],
     ),

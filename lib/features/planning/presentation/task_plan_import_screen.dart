@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/domain/life_record.dart';
 import '../../records/presentation/record_providers.dart';
@@ -55,13 +56,10 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              Text(
-                'Upload → review → approve',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'Files are read on this device. The complete 15-day preview stays local until you approve importing it. LIFE OS does not send source files to an AI service.',
+              const PageHeader(
+                title: 'Upload → review → approve',
+                subtitle:
+                    'Files are read on this device. The complete 15-day preview stays local until you approve importing it. LIFE OS does not send source files to an AI service.',
               ),
               const SizedBox(height: AppSpacing.md),
               const _LocalOnlyImportNote(),
@@ -135,6 +133,9 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
                   _PlanDayEditor(
                     day: day,
                     date: proposal.dates[day - 1],
+                    taskMinutes: proposal.taskMinutesByDay[day] ?? 0,
+                    existingMinutes: proposal.existingMinutesOnDay(day),
+                    capacity: proposal.dailyCapacityMinutes,
                     tasks: proposal.tasks
                         .where((task) => task.dayOffset == day)
                         .toList(),
@@ -305,14 +306,8 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
 
   void _replaceTask(TaskPlanProposal proposal, TaskPlanDraft changed) {
     setState(
-      () => _proposal = TaskPlanProposal(
-        fileName: proposal.fileName,
-        fingerprint: proposal.fingerprint,
-        startDate: proposal.startDate,
-        dailyCapacityMinutes: proposal.dailyCapacityMinutes,
-        format: proposal.format,
-        warnings: proposal.warnings,
-        tasks: proposal.tasks
+      () => _proposal = proposal.withTasks(
+        proposal.tasks
             .map((task) => task.id == changed.id ? changed : task)
             .toList(growable: false),
       ),
@@ -321,14 +316,8 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
 
   void _removeTask(TaskPlanProposal proposal, TaskPlanDraft task) {
     setState(
-      () => _proposal = TaskPlanProposal(
-        fileName: proposal.fileName,
-        fingerprint: proposal.fingerprint,
-        startDate: proposal.startDate,
-        dailyCapacityMinutes: proposal.dailyCapacityMinutes,
-        format: proposal.format,
-        warnings: proposal.warnings,
-        tasks: proposal.tasks
+      () => _proposal = proposal.withTasks(
+        proposal.tasks
             .where((item) => item.id != task.id)
             .toList(growable: false),
       ),
@@ -352,57 +341,26 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
       suggested: false,
       visibility: RecordVisibility.private,
     );
-    setState(
-      () => _proposal = TaskPlanProposal(
-        fileName: proposal.fileName,
-        fingerprint: proposal.fingerprint,
-        startDate: proposal.startDate,
-        dailyCapacityMinutes: proposal.dailyCapacityMinutes,
-        format: proposal.format,
-        warnings: proposal.warnings,
-        tasks: [...proposal.tasks, task],
-      ),
-    );
+    setState(() => _proposal = proposal.withTasks([...proposal.tasks, task]));
   }
 
   Future<void> _confirmImport() async {
     final proposal = _proposal;
     if (proposal == null) return;
-    final invalid = proposal.tasks.indexWhere(
-      (task) =>
-          task.title.trim().isEmpty ||
-          task.category.trim().isEmpty ||
-          task.durationMinutes < 1 ||
-          task.durationMinutes > 1440 ||
-          task.dayOffset < 1 ||
-          task.dayOffset > 15 ||
-          task.priority < 1 ||
-          task.priority > 3,
-    );
-    if (invalid >= 0) {
-      setState(
-        () => _error =
-            'Complete a title, category, priority, day, and 1–1440 minute estimate for every task before importing.',
-      );
+    try {
+      proposal.validateForApproval();
+    } on TaskPlanImportFailure catch (failure) {
+      setState(() => _error = failure.message);
       return;
     }
+    final overloadedDays = proposal.overloadedDays;
+    final scheduleConflicts = proposal.scheduleConflicts;
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Import this 15-day plan?'),
-        content: Text(
-          'This will create ${proposal.tasks.length} new local tasks beginning ${_dateKey(proposal.startDate)}. Existing tasks and historical completion records will not be changed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Review again'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Approve import'),
-          ),
-        ],
+      builder: (context) => _ImportApprovalDialog(
+        proposal: proposal,
+        overloadedDays: overloadedDays,
+        scheduleConflicts: scheduleConflicts,
       ),
     );
     if (accepted != true || !mounted) return;
@@ -449,6 +407,78 @@ class _TaskPlanImportScreenState extends ConsumerState<TaskPlanImportScreen> {
   }
 }
 
+class _ImportApprovalDialog extends StatefulWidget {
+  const _ImportApprovalDialog({
+    required this.proposal,
+    required this.overloadedDays,
+    required this.scheduleConflicts,
+  });
+
+  final TaskPlanProposal proposal;
+  final List<int> overloadedDays;
+  final List<String> scheduleConflicts;
+
+  @override
+  State<_ImportApprovalDialog> createState() => _ImportApprovalDialogState();
+}
+
+class _ImportApprovalDialogState extends State<_ImportApprovalDialog> {
+  bool _acknowledged = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final requiresAcknowledgement =
+        widget.overloadedDays.isNotEmpty || widget.scheduleConflicts.isNotEmpty;
+    return AlertDialog(
+      title: Text(
+        requiresAcknowledgement
+            ? 'Review schedule warnings'
+            : 'Import this 15-day plan?',
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              requiresAcknowledgement
+                  ? 'All tasks will be kept. Review the overload and preferred-time warnings in the preview. Reassign tasks or change capacity, or acknowledge these warnings to continue.'
+                  : 'This will create ${widget.proposal.tasks.length} new local tasks beginning ${_dateKey(widget.proposal.startDate)}. Existing tasks and historical completion records will not be changed.',
+            ),
+            if (widget.overloadedDays.isNotEmpty)
+              Text('Overloaded days: ${widget.overloadedDays.join(', ')}.'),
+            for (final conflict in widget.scheduleConflicts)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(conflict),
+              ),
+            if (requiresAcknowledgement)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _acknowledged,
+                onChanged: (value) =>
+                    setState(() => _acknowledged = value ?? false),
+                title: const Text('I reviewed and accept these warnings.'),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Review again'),
+        ),
+        FilledButton(
+          onPressed: requiresAcknowledgement && !_acknowledged
+              ? null
+              : () => Navigator.pop(context, true),
+          child: const Text('Approve import'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ProposalHeader extends StatelessWidget {
   const _ProposalHeader({required this.proposal});
   final TaskPlanProposal proposal;
@@ -478,6 +508,9 @@ class _PlanDayEditor extends StatelessWidget {
   const _PlanDayEditor({
     required this.day,
     required this.date,
+    required this.taskMinutes,
+    required this.existingMinutes,
+    required this.capacity,
     required this.tasks,
     required this.allTasks,
     required this.onChanged,
@@ -486,6 +519,9 @@ class _PlanDayEditor extends StatelessWidget {
   });
   final int day;
   final String date;
+  final int taskMinutes;
+  final int existingMinutes;
+  final int capacity;
   final List<TaskPlanDraft> tasks;
   final List<TaskPlanDraft> allTasks;
   final ValueChanged<TaskPlanDraft> onChanged;
@@ -514,6 +550,15 @@ class _PlanDayEditor extends StatelessWidget {
               ),
             ],
           ),
+          ProgressIndicatorCard(
+            label: 'Day $day workload',
+            value: (taskMinutes + existingMinutes).toDouble(),
+            total: capacity.toDouble(),
+            trailing:
+                '$taskMinutes task min + $existingMinutes existing min / $capacity min available',
+            isOverCapacity: taskMinutes + existingMinutes > capacity,
+          ),
+          const SizedBox(height: AppSpacing.sm),
           if (tasks.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -657,14 +702,53 @@ class _TaskDraftEditor extends StatelessWidget {
                 final match = RegExp(
                   r'^(\d{1,2}):(\d{2})$',
                 ).firstMatch(value.trim());
-                if (match == null) return;
+                if (value.trim().isEmpty) {
+                  onChanged(
+                    task.copyWith(
+                      scheduledMinute: 540,
+                      clearScheduleInputError: true,
+                      hasPreferredTime: false,
+                    ),
+                  );
+                  return;
+                }
+                if (match == null) {
+                  onChanged(
+                    task.copyWith(
+                      scheduleInputError:
+                          'Task "${task.title}" has an invalid preferred time. Use HH:MM.',
+                    ),
+                  );
+                  return;
+                }
                 final hour = int.parse(match[1]!);
                 final minute = int.parse(match[2]!);
                 if (hour < 24 && minute < 60) {
-                  onChanged(task.copyWith(scheduledMinute: hour * 60 + minute));
+                  onChanged(
+                    task.copyWith(
+                      scheduledMinute: hour * 60 + minute,
+                      clearScheduleInputError: true,
+                      hasPreferredTime: true,
+                    ),
+                  );
+                } else {
+                  onChanged(
+                    task.copyWith(
+                      scheduleInputError:
+                          'Task "${task.title}" has an invalid preferred time. Use 00:00–23:59.',
+                    ),
+                  );
                 }
               },
             ),
+            if (task.scheduleInputError case final error?)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  error,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
             const SizedBox(height: AppSpacing.xs),
             Row(
               children: [

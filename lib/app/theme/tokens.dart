@@ -10,6 +10,8 @@ abstract final class AppColors {
   static const cyan = Color(0xFF62E6F5);
   static const purple = Color(0xFFAA8BFF);
   static const green = Color(0xFF78E0B1);
+  static const warning = Color(0xFFFFC96B);
+  static const error = Color(0xFFFF7D91);
 }
 
 abstract final class AppSpacing {

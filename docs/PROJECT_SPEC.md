@@ -87,9 +87,9 @@ Implement:
 
 Do not overwrite historical completion records when creating a new plan.
 
-## 5. Rolling 14-day adaptive planning
+## 5. Rolling 15-day adaptive planning
 
-Plan the next 14 days at a time rather than generating an unnecessarily long fixed plan.
+Plan the next 15 days at a time rather than generating an unnecessarily long fixed plan. ChatGPT prepares the next plan as a CSV; LIFE OS imports it locally, shows the complete preview, validates it, and imports it only after explicit user approval. LIFE OS must not silently generate or replace a plan using AI.
 
 At the end of a planning period, the application should support exporting the previous period's data for review and preparing the next plan based on actual performance.
 
@@ -177,7 +177,7 @@ Provide a Reports & Export screen in Settings.
 Report period options:
 - Single day.
 - Full week.
-- 14 days.
+- 15 days.
 - Custom date range.
 
 Scope:
@@ -263,23 +263,32 @@ Phase 4: Implement routines, tasks, goals, habits, and historical completion log
 
 Phase 5: Implement prayer, fasting, notifications, gym, and sleep tracking.
 
-Phase 6: Implement learning sessions and evidence attachments.
+Phase 6: Implement and verify least-privilege sharing and synchronization, only after trusted identity and rules checks.
 
-Phase 7: Implement Android Screen Time collection and permission handling.
+Phase 7: Implement the local 15-day CSV/XLSX planning and approval workflow.
 
-Phase 8: Implement shared progress, comparison, leaderboard, and analytics.
+Phase 8: Implement learning sessions and private evidence lifecycle.
 
-Phase 9: Implement reports, PDF preview, device save/share, JSON export/import, and report validation.
+Phase 9: Implement Android Screen Time collection and permission handling.
 
-Phase 10: Implement approval-based adaptive planning and 14-day plan generation.
+Phase 10: Implement explicitly shared progress, comparison, and analytics.
 
-Phase 11: Complete end-to-end testing, accessibility review, performance checks, security review, and release-build validation.
+Phase 11: Implement reports, 15-day PDF preview, device save/share, JSON export/import, and validation.
+
+Phase 12: Implement approval-based adaptive planning over 15-day cycles.
+
+Phase 13: Complete end-to-end testing, accessibility review, performance checks, security review, and release-build validation.
 
 Reorder dependencies when necessary, but document why. Do not claim that later phases are complete merely because screens exist.
 
-## 13. First action — audit only
+## 13. Planning workflow and privacy boundaries
 
-For now, inspect the existing workspace, Flutter environment, project configuration, and source files.
+- The planning and reporting cycle is 15 days.
+- ChatGPT prepares the next plan as a CSV. LIFE OS reads source files locally, presents the complete preview, validates task fields, dates, dependencies, and capacity, and imports only after explicit approval.
+- LIFE OS does not silently generate or replace a plan using AI. Existing plans and completion history remain intact when a new plan is imported.
+- Personal records and evidence are private by default. Local shared-visibility metadata is not remote authorization.
+- Assigned-task Firestore support is a separate gated projection. General personal records remain local-only unless a separately reviewed, explicitly approved synchronization design is implemented.
+- Local emulator rules/tests do not prove production rules are deployed or that two devices synchronize. Never enable production sharing based on emulator results alone.
 
 Create or update only the project documentation needed to capture the requirements and audit results.
 

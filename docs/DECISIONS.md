@@ -1,5 +1,7 @@
 # Architecture and Implementation Decisions
 
+Entries below record decisions and observed state at their dated checkpoints. For current implementation status, see `docs/IMPLEMENTATION_STATUS.md`; later work added an assigned-task Firestore adapter and local rules while general record synchronization remains disabled.
+
 ## 2026-10-14 — Audit baseline
 
 - The repository is a generated Flutter application with no existing product architecture or LIFE OS feature code to preserve.
@@ -91,3 +93,10 @@
 - Require explicit reminder opt-in and a separate user tap to request Android notification permission. Exact-alarm access is a distinct setting. Use exact-while-idle mode only when access is granted; otherwise schedule inexact-while-idle and tell the user that delivery may be delayed. Do not declare `USE_EXACT_ALARM`.
 - Persist per-session dismissal and one-time snooze, plus reminder disable state, in a private UID-owned local prayer-kind record. Completion/dismissal cancels session IDs; schedule, permission, account, resume, date, and timezone changes reconcile. Plugin boot receiver restores notifications after reboot. Historical local dates/schedule snapshots are not modified.
 - Keep a testable gateway/service boundary with injected clock, timezone reader, and local preference store. No Firebase sync, Firebase config, account enforcement, billing, Firestore rules, or data upload is changed.
+
+## 2026-10-15 — Current implementation clarification
+
+- Planning and reporting use 15-day cycles. ChatGPT prepares the next plan as a CSV; LIFE OS performs local parsing, preview, validation, and import only after explicit approval. The app does not silently create or replace plans using AI.
+- Drift remains the local source for personal records and history. The separately gated Firestore adapter projects assigned tasks only; general records, goals, habits, completion history, evidence, tracking, and Screen Time are not synchronized.
+- Local Firestore rules and emulator tests exist for the assigned-task projection. Production rules, verified membership state, and cross-device behavior are not established by local files or synthetic emulator tests. Keep the sharing build flag off until those production facts are independently verified.
+- Existing Phase 2–5 decision entries describe the state at their recorded dates and are historical where they say Firebase/Firestore features were not yet implemented.

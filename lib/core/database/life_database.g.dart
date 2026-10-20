@@ -2897,6 +2897,592 @@ class TaskPlanImportsCompanion extends UpdateCompanion<TaskPlanImport> {
   }
 }
 
+class $SharedTaskAssignmentOutboxTable extends SharedTaskAssignmentOutbox
+    with
+        TableInfo<
+          $SharedTaskAssignmentOutboxTable,
+          SharedTaskAssignmentOutboxData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SharedTaskAssignmentOutboxTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerUidMeta = const VerificationMeta(
+    'ownerUid',
+  );
+  @override
+  late final GeneratedColumn<String> ownerUid = GeneratedColumn<String>(
+    'owner_uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
+    'idempotencyKey',
+  );
+  @override
+  late final GeneratedColumn<String> idempotencyKey = GeneratedColumn<String>(
+    'idempotency_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMinutesMeta = const VerificationMeta(
+    'durationMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> durationMinutes = GeneratedColumn<int>(
+    'duration_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deadlineMeta = const VerificationMeta(
+    'deadline',
+  );
+  @override
+  late final GeneratedColumn<String> deadline = GeneratedColumn<String>(
+    'deadline',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _queuedAtUtcMsMeta = const VerificationMeta(
+    'queuedAtUtcMs',
+  );
+  @override
+  late final GeneratedColumn<int> queuedAtUtcMs = GeneratedColumn<int>(
+    'queued_at_utc_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerUid,
+    idempotencyKey,
+    title,
+    date,
+    priority,
+    durationMinutes,
+    deadline,
+    notes,
+    queuedAtUtcMs,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shared_task_assignment_outbox';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SharedTaskAssignmentOutboxData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_uid')) {
+      context.handle(
+        _ownerUidMeta,
+        ownerUid.isAcceptableOrUnknown(data['owner_uid']!, _ownerUidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerUidMeta);
+    }
+    if (data.containsKey('idempotency_key')) {
+      context.handle(
+        _idempotencyKeyMeta,
+        idempotencyKey.isAcceptableOrUnknown(
+          data['idempotency_key']!,
+          _idempotencyKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_idempotencyKeyMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priorityMeta);
+    }
+    if (data.containsKey('duration_minutes')) {
+      context.handle(
+        _durationMinutesMeta,
+        durationMinutes.isAcceptableOrUnknown(
+          data['duration_minutes']!,
+          _durationMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_durationMinutesMeta);
+    }
+    if (data.containsKey('deadline')) {
+      context.handle(
+        _deadlineMeta,
+        deadline.isAcceptableOrUnknown(data['deadline']!, _deadlineMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_notesMeta);
+    }
+    if (data.containsKey('queued_at_utc_ms')) {
+      context.handle(
+        _queuedAtUtcMsMeta,
+        queuedAtUtcMs.isAcceptableOrUnknown(
+          data['queued_at_utc_ms']!,
+          _queuedAtUtcMsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_queuedAtUtcMsMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerUid};
+  @override
+  SharedTaskAssignmentOutboxData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SharedTaskAssignmentOutboxData(
+      ownerUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_uid'],
+      )!,
+      idempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}idempotency_key'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      durationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_minutes'],
+      )!,
+      deadline: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deadline'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      )!,
+      queuedAtUtcMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}queued_at_utc_ms'],
+      )!,
+    );
+  }
+
+  @override
+  $SharedTaskAssignmentOutboxTable createAlias(String alias) {
+    return $SharedTaskAssignmentOutboxTable(attachedDatabase, alias);
+  }
+}
+
+class SharedTaskAssignmentOutboxData extends DataClass
+    implements Insertable<SharedTaskAssignmentOutboxData> {
+  final String ownerUid;
+  final String idempotencyKey;
+  final String title;
+  final String date;
+  final int priority;
+  final int durationMinutes;
+  final String? deadline;
+  final String notes;
+  final int queuedAtUtcMs;
+  const SharedTaskAssignmentOutboxData({
+    required this.ownerUid,
+    required this.idempotencyKey,
+    required this.title,
+    required this.date,
+    required this.priority,
+    required this.durationMinutes,
+    this.deadline,
+    required this.notes,
+    required this.queuedAtUtcMs,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_uid'] = Variable<String>(ownerUid);
+    map['idempotency_key'] = Variable<String>(idempotencyKey);
+    map['title'] = Variable<String>(title);
+    map['date'] = Variable<String>(date);
+    map['priority'] = Variable<int>(priority);
+    map['duration_minutes'] = Variable<int>(durationMinutes);
+    if (!nullToAbsent || deadline != null) {
+      map['deadline'] = Variable<String>(deadline);
+    }
+    map['notes'] = Variable<String>(notes);
+    map['queued_at_utc_ms'] = Variable<int>(queuedAtUtcMs);
+    return map;
+  }
+
+  SharedTaskAssignmentOutboxCompanion toCompanion(bool nullToAbsent) {
+    return SharedTaskAssignmentOutboxCompanion(
+      ownerUid: Value(ownerUid),
+      idempotencyKey: Value(idempotencyKey),
+      title: Value(title),
+      date: Value(date),
+      priority: Value(priority),
+      durationMinutes: Value(durationMinutes),
+      deadline: deadline == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deadline),
+      notes: Value(notes),
+      queuedAtUtcMs: Value(queuedAtUtcMs),
+    );
+  }
+
+  factory SharedTaskAssignmentOutboxData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SharedTaskAssignmentOutboxData(
+      ownerUid: serializer.fromJson<String>(json['ownerUid']),
+      idempotencyKey: serializer.fromJson<String>(json['idempotencyKey']),
+      title: serializer.fromJson<String>(json['title']),
+      date: serializer.fromJson<String>(json['date']),
+      priority: serializer.fromJson<int>(json['priority']),
+      durationMinutes: serializer.fromJson<int>(json['durationMinutes']),
+      deadline: serializer.fromJson<String?>(json['deadline']),
+      notes: serializer.fromJson<String>(json['notes']),
+      queuedAtUtcMs: serializer.fromJson<int>(json['queuedAtUtcMs']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerUid': serializer.toJson<String>(ownerUid),
+      'idempotencyKey': serializer.toJson<String>(idempotencyKey),
+      'title': serializer.toJson<String>(title),
+      'date': serializer.toJson<String>(date),
+      'priority': serializer.toJson<int>(priority),
+      'durationMinutes': serializer.toJson<int>(durationMinutes),
+      'deadline': serializer.toJson<String?>(deadline),
+      'notes': serializer.toJson<String>(notes),
+      'queuedAtUtcMs': serializer.toJson<int>(queuedAtUtcMs),
+    };
+  }
+
+  SharedTaskAssignmentOutboxData copyWith({
+    String? ownerUid,
+    String? idempotencyKey,
+    String? title,
+    String? date,
+    int? priority,
+    int? durationMinutes,
+    Value<String?> deadline = const Value.absent(),
+    String? notes,
+    int? queuedAtUtcMs,
+  }) => SharedTaskAssignmentOutboxData(
+    ownerUid: ownerUid ?? this.ownerUid,
+    idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+    title: title ?? this.title,
+    date: date ?? this.date,
+    priority: priority ?? this.priority,
+    durationMinutes: durationMinutes ?? this.durationMinutes,
+    deadline: deadline.present ? deadline.value : this.deadline,
+    notes: notes ?? this.notes,
+    queuedAtUtcMs: queuedAtUtcMs ?? this.queuedAtUtcMs,
+  );
+  SharedTaskAssignmentOutboxData copyWithCompanion(
+    SharedTaskAssignmentOutboxCompanion data,
+  ) {
+    return SharedTaskAssignmentOutboxData(
+      ownerUid: data.ownerUid.present ? data.ownerUid.value : this.ownerUid,
+      idempotencyKey: data.idempotencyKey.present
+          ? data.idempotencyKey.value
+          : this.idempotencyKey,
+      title: data.title.present ? data.title.value : this.title,
+      date: data.date.present ? data.date.value : this.date,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      durationMinutes: data.durationMinutes.present
+          ? data.durationMinutes.value
+          : this.durationMinutes,
+      deadline: data.deadline.present ? data.deadline.value : this.deadline,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      queuedAtUtcMs: data.queuedAtUtcMs.present
+          ? data.queuedAtUtcMs.value
+          : this.queuedAtUtcMs,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharedTaskAssignmentOutboxData(')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('title: $title, ')
+          ..write('date: $date, ')
+          ..write('priority: $priority, ')
+          ..write('durationMinutes: $durationMinutes, ')
+          ..write('deadline: $deadline, ')
+          ..write('notes: $notes, ')
+          ..write('queuedAtUtcMs: $queuedAtUtcMs')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerUid,
+    idempotencyKey,
+    title,
+    date,
+    priority,
+    durationMinutes,
+    deadline,
+    notes,
+    queuedAtUtcMs,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SharedTaskAssignmentOutboxData &&
+          other.ownerUid == this.ownerUid &&
+          other.idempotencyKey == this.idempotencyKey &&
+          other.title == this.title &&
+          other.date == this.date &&
+          other.priority == this.priority &&
+          other.durationMinutes == this.durationMinutes &&
+          other.deadline == this.deadline &&
+          other.notes == this.notes &&
+          other.queuedAtUtcMs == this.queuedAtUtcMs);
+}
+
+class SharedTaskAssignmentOutboxCompanion
+    extends UpdateCompanion<SharedTaskAssignmentOutboxData> {
+  final Value<String> ownerUid;
+  final Value<String> idempotencyKey;
+  final Value<String> title;
+  final Value<String> date;
+  final Value<int> priority;
+  final Value<int> durationMinutes;
+  final Value<String?> deadline;
+  final Value<String> notes;
+  final Value<int> queuedAtUtcMs;
+  final Value<int> rowid;
+  const SharedTaskAssignmentOutboxCompanion({
+    this.ownerUid = const Value.absent(),
+    this.idempotencyKey = const Value.absent(),
+    this.title = const Value.absent(),
+    this.date = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.durationMinutes = const Value.absent(),
+    this.deadline = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.queuedAtUtcMs = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SharedTaskAssignmentOutboxCompanion.insert({
+    required String ownerUid,
+    required String idempotencyKey,
+    required String title,
+    required String date,
+    required int priority,
+    required int durationMinutes,
+    this.deadline = const Value.absent(),
+    required String notes,
+    required int queuedAtUtcMs,
+    this.rowid = const Value.absent(),
+  }) : ownerUid = Value(ownerUid),
+       idempotencyKey = Value(idempotencyKey),
+       title = Value(title),
+       date = Value(date),
+       priority = Value(priority),
+       durationMinutes = Value(durationMinutes),
+       notes = Value(notes),
+       queuedAtUtcMs = Value(queuedAtUtcMs);
+  static Insertable<SharedTaskAssignmentOutboxData> custom({
+    Expression<String>? ownerUid,
+    Expression<String>? idempotencyKey,
+    Expression<String>? title,
+    Expression<String>? date,
+    Expression<int>? priority,
+    Expression<int>? durationMinutes,
+    Expression<String>? deadline,
+    Expression<String>? notes,
+    Expression<int>? queuedAtUtcMs,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerUid != null) 'owner_uid': ownerUid,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (title != null) 'title': title,
+      if (date != null) 'date': date,
+      if (priority != null) 'priority': priority,
+      if (durationMinutes != null) 'duration_minutes': durationMinutes,
+      if (deadline != null) 'deadline': deadline,
+      if (notes != null) 'notes': notes,
+      if (queuedAtUtcMs != null) 'queued_at_utc_ms': queuedAtUtcMs,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SharedTaskAssignmentOutboxCompanion copyWith({
+    Value<String>? ownerUid,
+    Value<String>? idempotencyKey,
+    Value<String>? title,
+    Value<String>? date,
+    Value<int>? priority,
+    Value<int>? durationMinutes,
+    Value<String?>? deadline,
+    Value<String>? notes,
+    Value<int>? queuedAtUtcMs,
+    Value<int>? rowid,
+  }) {
+    return SharedTaskAssignmentOutboxCompanion(
+      ownerUid: ownerUid ?? this.ownerUid,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      title: title ?? this.title,
+      date: date ?? this.date,
+      priority: priority ?? this.priority,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      deadline: deadline ?? this.deadline,
+      notes: notes ?? this.notes,
+      queuedAtUtcMs: queuedAtUtcMs ?? this.queuedAtUtcMs,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerUid.present) {
+      map['owner_uid'] = Variable<String>(ownerUid.value);
+    }
+    if (idempotencyKey.present) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (durationMinutes.present) {
+      map['duration_minutes'] = Variable<int>(durationMinutes.value);
+    }
+    if (deadline.present) {
+      map['deadline'] = Variable<String>(deadline.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (queuedAtUtcMs.present) {
+      map['queued_at_utc_ms'] = Variable<int>(queuedAtUtcMs.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharedTaskAssignmentOutboxCompanion(')
+          ..write('ownerUid: $ownerUid, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('title: $title, ')
+          ..write('date: $date, ')
+          ..write('priority: $priority, ')
+          ..write('durationMinutes: $durationMinutes, ')
+          ..write('deadline: $deadline, ')
+          ..write('notes: $notes, ')
+          ..write('queuedAtUtcMs: $queuedAtUtcMs, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LifeDatabase extends GeneratedDatabase {
   _$LifeDatabase(QueryExecutor e) : super(e);
   $LifeDatabaseManager get managers => $LifeDatabaseManager(this);
@@ -2911,6 +3497,8 @@ abstract class _$LifeDatabase extends GeneratedDatabase {
   late final $TaskPlanImportsTable taskPlanImports = $TaskPlanImportsTable(
     this,
   );
+  late final $SharedTaskAssignmentOutboxTable sharedTaskAssignmentOutbox =
+      $SharedTaskAssignmentOutboxTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2921,6 +3509,7 @@ abstract class _$LifeDatabase extends GeneratedDatabase {
     activityHistory,
     trackingEntries,
     taskPlanImports,
+    sharedTaskAssignmentOutbox,
   ];
 }
 
@@ -5245,6 +5834,307 @@ typedef $$TaskPlanImportsTableProcessedTableManager =
       TaskPlanImport,
       PrefetchHooks Function({bool ownerUid})
     >;
+typedef $$SharedTaskAssignmentOutboxTableCreateCompanionBuilder =
+    SharedTaskAssignmentOutboxCompanion Function({
+      required String ownerUid,
+      required String idempotencyKey,
+      required String title,
+      required String date,
+      required int priority,
+      required int durationMinutes,
+      Value<String?> deadline,
+      required String notes,
+      required int queuedAtUtcMs,
+      Value<int> rowid,
+    });
+typedef $$SharedTaskAssignmentOutboxTableUpdateCompanionBuilder =
+    SharedTaskAssignmentOutboxCompanion Function({
+      Value<String> ownerUid,
+      Value<String> idempotencyKey,
+      Value<String> title,
+      Value<String> date,
+      Value<int> priority,
+      Value<int> durationMinutes,
+      Value<String?> deadline,
+      Value<String> notes,
+      Value<int> queuedAtUtcMs,
+      Value<int> rowid,
+    });
+
+class $$SharedTaskAssignmentOutboxTableFilterComposer
+    extends Composer<_$LifeDatabase, $SharedTaskAssignmentOutboxTable> {
+  $$SharedTaskAssignmentOutboxTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerUid => $composableBuilder(
+    column: $table.ownerUid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deadline => $composableBuilder(
+    column: $table.deadline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get queuedAtUtcMs => $composableBuilder(
+    column: $table.queuedAtUtcMs,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SharedTaskAssignmentOutboxTableOrderingComposer
+    extends Composer<_$LifeDatabase, $SharedTaskAssignmentOutboxTable> {
+  $$SharedTaskAssignmentOutboxTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerUid => $composableBuilder(
+    column: $table.ownerUid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deadline => $composableBuilder(
+    column: $table.deadline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get queuedAtUtcMs => $composableBuilder(
+    column: $table.queuedAtUtcMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SharedTaskAssignmentOutboxTableAnnotationComposer
+    extends Composer<_$LifeDatabase, $SharedTaskAssignmentOutboxTable> {
+  $$SharedTaskAssignmentOutboxTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerUid =>
+      $composableBuilder(column: $table.ownerUid, builder: (column) => column);
+
+  GeneratedColumn<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMinutes => $composableBuilder(
+    column: $table.durationMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get deadline =>
+      $composableBuilder(column: $table.deadline, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get queuedAtUtcMs => $composableBuilder(
+    column: $table.queuedAtUtcMs,
+    builder: (column) => column,
+  );
+}
+
+class $$SharedTaskAssignmentOutboxTableTableManager
+    extends
+        RootTableManager<
+          _$LifeDatabase,
+          $SharedTaskAssignmentOutboxTable,
+          SharedTaskAssignmentOutboxData,
+          $$SharedTaskAssignmentOutboxTableFilterComposer,
+          $$SharedTaskAssignmentOutboxTableOrderingComposer,
+          $$SharedTaskAssignmentOutboxTableAnnotationComposer,
+          $$SharedTaskAssignmentOutboxTableCreateCompanionBuilder,
+          $$SharedTaskAssignmentOutboxTableUpdateCompanionBuilder,
+          (
+            SharedTaskAssignmentOutboxData,
+            BaseReferences<
+              _$LifeDatabase,
+              $SharedTaskAssignmentOutboxTable,
+              SharedTaskAssignmentOutboxData
+            >,
+          ),
+          SharedTaskAssignmentOutboxData,
+          PrefetchHooks Function()
+        > {
+  $$SharedTaskAssignmentOutboxTableTableManager(
+    _$LifeDatabase db,
+    $SharedTaskAssignmentOutboxTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SharedTaskAssignmentOutboxTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SharedTaskAssignmentOutboxTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SharedTaskAssignmentOutboxTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerUid = const Value.absent(),
+                Value<String> idempotencyKey = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<int> durationMinutes = const Value.absent(),
+                Value<String?> deadline = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> queuedAtUtcMs = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SharedTaskAssignmentOutboxCompanion(
+                ownerUid: ownerUid,
+                idempotencyKey: idempotencyKey,
+                title: title,
+                date: date,
+                priority: priority,
+                durationMinutes: durationMinutes,
+                deadline: deadline,
+                notes: notes,
+                queuedAtUtcMs: queuedAtUtcMs,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerUid,
+                required String idempotencyKey,
+                required String title,
+                required String date,
+                required int priority,
+                required int durationMinutes,
+                Value<String?> deadline = const Value.absent(),
+                required String notes,
+                required int queuedAtUtcMs,
+                Value<int> rowid = const Value.absent(),
+              }) => SharedTaskAssignmentOutboxCompanion.insert(
+                ownerUid: ownerUid,
+                idempotencyKey: idempotencyKey,
+                title: title,
+                date: date,
+                priority: priority,
+                durationMinutes: durationMinutes,
+                deadline: deadline,
+                notes: notes,
+                queuedAtUtcMs: queuedAtUtcMs,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SharedTaskAssignmentOutboxTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LifeDatabase,
+      $SharedTaskAssignmentOutboxTable,
+      SharedTaskAssignmentOutboxData,
+      $$SharedTaskAssignmentOutboxTableFilterComposer,
+      $$SharedTaskAssignmentOutboxTableOrderingComposer,
+      $$SharedTaskAssignmentOutboxTableAnnotationComposer,
+      $$SharedTaskAssignmentOutboxTableCreateCompanionBuilder,
+      $$SharedTaskAssignmentOutboxTableUpdateCompanionBuilder,
+      (
+        SharedTaskAssignmentOutboxData,
+        BaseReferences<
+          _$LifeDatabase,
+          $SharedTaskAssignmentOutboxTable,
+          SharedTaskAssignmentOutboxData
+        >,
+      ),
+      SharedTaskAssignmentOutboxData,
+      PrefetchHooks Function()
+    >;
 
 class $LifeDatabaseManager {
   final _$LifeDatabase _db;
@@ -5259,4 +6149,10 @@ class $LifeDatabaseManager {
       $$TrackingEntriesTableTableManager(_db, _db.trackingEntries);
   $$TaskPlanImportsTableTableManager get taskPlanImports =>
       $$TaskPlanImportsTableTableManager(_db, _db.taskPlanImports);
+  $$SharedTaskAssignmentOutboxTableTableManager
+  get sharedTaskAssignmentOutbox =>
+      $$SharedTaskAssignmentOutboxTableTableManager(
+        _db,
+        _db.sharedTaskAssignmentOutbox,
+      );
 }

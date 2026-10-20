@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/presentation/record_providers.dart';
 import '../../tracking/domain/tracking_entry.dart';
@@ -568,12 +569,9 @@ List<TrackingEntry> _recent(List<TrackingEntry> entries, DateTime cutoff) =>
 class _LocalOnlyLabel extends StatelessWidget {
   const _LocalOnlyLabel();
   @override
-  Widget build(BuildContext context) => const Row(
-    children: [
-      Icon(Icons.cloud_off_outlined, size: 17, color: AppColors.purple),
-      SizedBox(width: AppSpacing.xs),
-      Text('Private · Saved on this device · Cloud sync off'),
-    ],
+  Widget build(BuildContext context) => const PrivacySourceLabel(
+    source: PrivacySource.privateLocal,
+    details: 'Cloud sync is off',
   );
 }
 

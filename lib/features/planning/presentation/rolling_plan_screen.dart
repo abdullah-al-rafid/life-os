@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/presentation/record_providers.dart';
 import '../domain/planning_repository.dart';
@@ -66,6 +67,16 @@ class _RollingPlanScreenState extends ConsumerState<RollingPlanScreen> {
     }
     _proposal ??= _generate(items, history);
     final proposal = _proposal!;
+    final dayLoads = <int, int>{};
+    for (final task in proposal.drafts) {
+      dayLoads.update(
+        task.dayOffset,
+        (minutes) => minutes + task.durationMinutes,
+        ifAbsent: () => task.durationMinutes,
+      );
+    }
+    final sortedLoads = dayLoads.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -109,6 +120,18 @@ class _RollingPlanScreenState extends ConsumerState<RollingPlanScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
+        for (final entry in sortedLoads)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: ProgressIndicatorCard(
+              label: 'Day ${entry.key} workload',
+              value: entry.value.toDouble(),
+              total: proposal.capacityMinutes.toDouble(),
+              trailing: '${entry.value} / ${proposal.capacityMinutes} min',
+              isOverCapacity: entry.value > proposal.capacityMinutes,
+            ),
+          ),
+        if (sortedLoads.isNotEmpty) const SizedBox(height: AppSpacing.sm),
         for (final warning in proposal.warnings)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -234,6 +257,58 @@ class _RollingPlanScreenState extends ConsumerState<RollingPlanScreen> {
   }
 
   Future<void> _approve(RollingPlanProposal proposal) async {
+    final overloads = <int, int>{};
+    for (final task in proposal.drafts) {
+      overloads.update(
+        task.dayOffset,
+        (minutes) => minutes + task.durationMinutes,
+        ifAbsent: () => task.durationMinutes,
+      );
+    }
+    final overloadedDays = overloads.entries
+        .where((entry) => entry.value > proposal.capacityMinutes)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    if (overloadedDays.isNotEmpty) {
+      var acknowledged = false;
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Review overloaded days'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'All ${proposal.drafts.length} carryover tasks will be kept. Days ${overloadedDays.join(', ')} exceed ${proposal.capacityMinutes} minutes. Reassign or change capacity, or acknowledge the overload to continue.',
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: acknowledged,
+                  onChanged: (value) =>
+                      setDialogState(() => acknowledged = value ?? false),
+                  title: const Text('I reviewed and accept these overloads.'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Review again'),
+              ),
+              FilledButton(
+                onPressed: acknowledged
+                    ? () => Navigator.pop(context, true)
+                    : null,
+                child: const Text('Approve carryover'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (accepted != true || !mounted) return;
+    }
     setState(() {
       _saving = true;
       _error = null;

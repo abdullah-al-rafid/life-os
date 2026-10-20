@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Membership is provisioned by a trusted administrator. Clients cannot
+    // create or change memberships, and email claims are never consulted.
+    function activeMember(uid) {
+      return exists(/databases/$(database)/documents/lifeOsMembers/$(uid))
+        && get(/databases/$(database)/documents/lifeOsMembers/$(uid)).data.active == true;
+    }
+
+    function pairedMembers(ownerUid, assigneeUid) {
+      return ownerUid != assigneeUid
+        && activeMember(ownerUid)
+        && activeMember(assigneeUid)
+        && get(/databases/$(database)/documents/lifeOsMembers/$(ownerUid)).data.peerUid == assigneeUid
+        && get(/databases/$(database)/documents/lifeOsMembers/$(assigneeUid)).data.peerUid == ownerUid;
+    }
+
+    function validTask(data) {
+      return data.keys().hasAll([
+          'ownerUid', 'assigneeUid', 'title', 'date', 'priority',
+          'durationMinutes', 'deadline', 'notes', 'status', 'revoked',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerUid', 'assigneeUid', 'title', 'date', 'priority',
+          'durationMinutes', 'deadline', 'notes', 'status', 'revoked',
+          'createdAt', 'updatedAt'
+        ])
+        && data.ownerUid is string && data.ownerUid.size() > 0
+        && data.assigneeUid is string && data.assigneeUid.size() > 0
+        && data.ownerUid != data.assigneeUid
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 240
+        && data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.priority is int && data.priority >= 1 && data.priority <= 3
+        && data.durationMinutes is int && data.durationMinutes >= 1 && data.durationMinutes <= 1440
+        && (data.deadline == null || (data.deadline is string && data.deadline.matches('^\\d{4}-\\d{2}-\\d{2}$')))
+        && data.notes is string && data.notes.size() <= 4000
+        && data.status in ['done', 'partial', 'notDone']
+        && data.revoked is bool
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /lifeOsMembers/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid && activeMember(uid);
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /sharedTasks/{taskId} {
+      function isParty(data) {
+        return data != null
+          && signedIn()
+          && activeMember(request.auth.uid)
+          && (data.ownerUid == request.auth.uid
+            || (data.assigneeUid == request.auth.uid && data.revoked == false));
+      }
+
+      // A keyed-creation transaction must be able to read its absent target.
+      // This grants no read access to existing tasks unless the caller is a party.
+      allow get: if signedIn()
+        && activeMember(request.auth.uid)
+        && (resource == null || resource.data == null || isParty(resource.data));
+      allow list: if isParty(resource.data);
+
+      allow create: if signedIn()
+        && activeMember(request.auth.uid)
+        && validTask(request.resource.data)
+        && request.resource.data.ownerUid == request.auth.uid
+        && pairedMembers(request.auth.uid, request.resource.data.assigneeUid)
+        && request.resource.data.status == 'notDone'
+        && request.resource.data.revoked == false
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if signedIn()
+        && activeMember(request.auth.uid)
+        && validTask(request.resource.data)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.ownerUid == request.auth.uid
+            && pairedMembers(request.auth.uid, request.resource.data.assigneeUid)
+            && request.resource.data.assigneeUid == resource.data.assigneeUid
+            && request.resource.data.title == resource.data.title
+            && request.resource.data.date == resource.data.date
+            && request.resource.data.priority == resource.data.priority
+            && request.resource.data.durationMinutes == resource.data.durationMinutes
+            && request.resource.data.deadline == resource.data.deadline
+            && request.resource.data.notes == resource.data.notes
+            && request.resource.data.status == resource.data.status
+            && (request.resource.data.revoked == resource.data.revoked
+              || request.resource.data.revoked == true))
+          || (resource.data.assigneeUid == request.auth.uid
+            && resource.data.revoked == false
+            && request.resource.data.assigneeUid == resource.data.assigneeUid
+            && request.resource.data.ownerUid == resource.data.ownerUid
+            && request.resource.data.revoked == resource.data.revoked
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt']))
+        );
+
+      // Keep revocation as an owner-controlled tombstone; never hard-delete.
+      allow delete: if false;
+    }
+
+    // Every other path, including private records, is denied by default.
+  }
+}

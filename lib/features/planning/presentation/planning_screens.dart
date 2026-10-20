@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/domain/life_record.dart';
 import '../../records/presentation/record_providers.dart';
@@ -48,7 +49,18 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                     AppSpacing.lg,
                     AppSpacing.md,
                   ),
-                  sliver: SliverToBoxAdapter(child: _Header(kind: widget.kind)),
+                  sliver: SliverToBoxAdapter(
+                    child: PageHeader(
+                      title: widget.kind == PlanningKind.goal
+                          ? 'Goals'
+                          : widget.kind == null
+                          ? 'Today’s plan'
+                          : '${widget.kind!.name[0].toUpperCase()}${widget.kind!.name.substring(1)}s',
+                      subtitle: widget.kind == PlanningKind.goal
+                          ? 'Set a measurable target and keep each progress entry.'
+                          : 'Tasks, recurring routines, and habits for today.',
+                    ),
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
@@ -84,6 +96,12 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          OutlinedButton.icon(
+                            key: const Key('open_assigned_tasks'),
+                            onPressed: () => context.push('/plan/assigned'),
+                            icon: const Icon(Icons.group_outlined),
+                            label: const Text('Assigned tasks'),
+                          ),
                           OutlinedButton.icon(
                             key: const Key('open_rolling_plan'),
                             onPressed: () => context.push('/plan/rolling'),
@@ -438,20 +456,23 @@ class PlanningInsightsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                Text(
-                  'LIFE OS / INSIGHTS',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.cyan,
-                    letterSpacing: 1,
-                  ),
+                const PageHeader(
+                  title: 'Progress & Reports',
+                  subtitle:
+                      'A private summary of activity saved on this device.',
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Your consistency',
-                  style: Theme.of(context).textTheme.headlineMedium,
+                const PrivacySourceLabel(
+                  source: PrivacySource.localOnly,
+                  details: 'Cloud sync is off',
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                const _LocalOnlyBadge(),
+                const SizedBox(height: AppSpacing.md),
+                FilledButton.icon(
+                  key: const Key('open_15_day_report'),
+                  onPressed: () => context.push('/reports/15-day'),
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: const Text('Build a 15-day PDF report'),
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 const TrackingSummaryCard(insights: true),
                 const SizedBox(height: AppSpacing.lg),
@@ -672,56 +693,14 @@ class _HabitSummary extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.kind});
-  final PlanningKind? kind;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'LIFE OS / ${(kind?.name ?? 'PLAN').toUpperCase()}',
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: AppColors.cyan,
-          letterSpacing: 1,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        kind == PlanningKind.goal
-            ? 'Goals'
-            : kind == null
-            ? 'Today’s plan'
-            : '${kind!.name[0].toUpperCase()}${kind!.name.substring(1)}s',
-        style: Theme.of(context).textTheme.headlineMedium,
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        kind == PlanningKind.goal
-            ? 'Set a measurable target and keep each progress entry.'
-            : 'Tasks, recurring routines, and habits for today.',
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-      ),
-    ],
-  );
-}
-
 class _LocalOnlyBadge extends StatelessWidget {
   const _LocalOnlyBadge();
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-    child: Row(
-      children: [
-        const Icon(Icons.cloud_off_outlined, color: AppColors.purple, size: 17),
-        const SizedBox(width: 7),
-        Text(
-          'Offline ready · Stored on this device · Cloud sync is off',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.only(bottom: AppSpacing.md),
+    child: PrivacySourceLabel(
+      source: PrivacySource.localOnly,
+      details: 'Cloud sync is off',
     ),
   );
 }
@@ -794,10 +773,13 @@ class _ItemCard extends ConsumerWidget {
             children: [
               Chip(label: Text(item.kind.name)),
               Chip(
-                label: Text(
-                  item.visibility == RecordVisibility.shared
-                      ? 'Shared on this device'
-                      : 'Private',
+                label: PrivacySourceLabel(
+                  source: item.visibility == RecordVisibility.shared
+                      ? PrivacySource.shared
+                      : PrivacySource.privateLocal,
+                  details: item.visibility == RecordVisibility.shared
+                      ? 'on this device'
+                      : null,
                 ),
               ),
               if (item.category.isNotEmpty) Chip(label: Text(item.category)),
@@ -965,6 +947,7 @@ class _PlanningFormState extends State<_PlanningForm> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: Text(
       widget.item == null
           ? 'Create ${widget.kind.name}'

@@ -27,6 +27,7 @@ void main() {
     recurrence: 'once',
     weekdays: const [],
     targetDate: null,
+    startDate: date,
     targetValue: null,
     targetUnit: '',
     archived: false,
@@ -44,16 +45,20 @@ void main() {
     final history = [
       PlanningHistoryEntry(
         id: 'history-done',
+        ownerUid: 'uid',
         definitionId: 'done',
         kind: 'taskCompletion',
+        visibility: RecordVisibility.private,
         localDate: '2026-10-10',
         payload: jsonEncode({'status': 'done'}),
         recordedAtUtc: now,
       ),
       PlanningHistoryEntry(
         id: 'history-partial',
+        ownerUid: 'uid',
         definitionId: 'partial',
         kind: 'taskCompletion',
+        visibility: RecordVisibility.private,
         localDate: '2026-10-10',
         payload: jsonEncode({'status': 'partial'}),
         recordedAtUtc: now,
@@ -111,6 +116,20 @@ void main() {
         dailyCapacityMinutes: 0,
       ),
       throwsArgumentError,
+    );
+  });
+
+  test('rolling proposal retains tasks and identifies overloaded days', () {
+    final result = buildRollingPlanProposal(
+      items: [for (var index = 0; index < 40; index++) task('carry-$index')],
+      history: const [],
+      startDate: DateTime(2026, 10, 15),
+      dailyCapacityMinutes: 120,
+    );
+    expect(result.drafts, hasLength(40));
+    expect(
+      result.warnings.join(),
+      contains('exceed the selected daily capacity'),
     );
   });
 }

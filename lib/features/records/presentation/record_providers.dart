@@ -9,6 +9,7 @@ import '../data/drift_life_record_store.dart';
 import '../domain/life_record_repository.dart';
 import '../../planning/domain/planning_repository.dart';
 import '../../planning/domain/task_plan_import.dart';
+import '../../planning/data/shared_task_assignment_outbox.dart';
 import '../../tracking/data/drift_tracking_entry_store.dart';
 import '../../tracking/domain/tracking_entry.dart';
 import '../../tracking/domain/tracking_entry_repository.dart';
@@ -23,6 +24,11 @@ final lifeDatabaseProvider = Provider<LifeDatabase>((ref) {
   ref.onDispose(() => unawaited(database.close()));
   return database;
 });
+
+final sharedTaskAssignmentOutboxProvider =
+    Provider<SharedTaskAssignmentOutboxStore>(
+      (ref) => SharedTaskAssignmentOutboxStore(ref.watch(lifeDatabaseProvider)),
+    );
 
 final lifeRecordRepositoryProvider = Provider<LifeRecordRepository>((ref) {
   final store = DriftLifeRecordStore(ref.watch(lifeDatabaseProvider));

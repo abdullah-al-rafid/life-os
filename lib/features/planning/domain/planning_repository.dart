@@ -28,6 +28,7 @@ class PlanningItem {
     required this.recurrence,
     required this.weekdays,
     required this.targetDate,
+    required this.startDate,
     required this.targetValue,
     required this.targetUnit,
     required this.archived,
@@ -51,6 +52,7 @@ class PlanningItem {
   final RecordVisibility visibility;
   final int priority, scheduledMinute, durationMinutes, revision;
   final String? scheduledDate, targetDate;
+  final String startDate;
   final double? targetValue;
   final List<int> weekdays;
   final bool archived;
@@ -90,6 +92,7 @@ class PlanningItem {
     'recurrence': recurrence,
     'weekdays': weekdays,
     'targetDate': targetDate,
+    'startDate': startDate,
     'targetValue': targetValue,
     'targetUnit': targetUnit,
     'archived': archived,
@@ -117,6 +120,9 @@ class PlanningItem {
       recurrence: json['recurrence'] as String? ?? 'once',
       weekdays: (json['weekdays'] as List<dynamic>? ?? const []).cast<int>(),
       targetDate: json['targetDate'] as String?,
+      // Older payloads predate explicit goal start dates. Their creation date
+      // is the safest compatible fallback and requires no migration.
+      startDate: json['startDate'] as String? ?? _dateKey(record.createdAtUtc),
       targetValue: (json['targetValue'] as num?)?.toDouble(),
       targetUnit: json['targetUnit'] as String? ?? '',
       archived: json['archived'] as bool? ?? false,
@@ -142,14 +148,92 @@ class PlanningValidationFailure implements Exception {
 class PlanningHistoryEntry {
   const PlanningHistoryEntry({
     required this.id,
+    required this.ownerUid,
     required this.definitionId,
     required this.kind,
+    required this.visibility,
     required this.localDate,
     required this.payload,
     required this.recordedAtUtc,
   });
-  final String id, definitionId, kind, localDate, payload;
+  final String id, ownerUid, definitionId, kind, localDate, payload;
+  final RecordVisibility visibility;
   final DateTime recordedAtUtc;
+}
+
+class GoalContribution {
+  const GoalContribution({
+    required this.authorUid,
+    required this.date,
+    required this.amount,
+    required this.notes,
+    this.evidenceReference,
+  });
+
+  final String authorUid, date, notes;
+  final double amount;
+  final String? evidenceReference;
+
+  factory GoalContribution.fromHistory(PlanningHistoryEntry entry) {
+    final payload = jsonDecode(entry.payload) as Map<String, dynamic>;
+    final amount = (payload['value'] as num).toDouble();
+    if (!amount.isFinite || amount < 0) {
+      throw const PlanningValidationFailure(
+        'A saved goal contribution has an invalid amount.',
+      );
+    }
+    return GoalContribution(
+      authorUid: entry.ownerUid,
+      date: entry.localDate,
+      amount: amount,
+      notes: payload['notes'] as String? ?? '',
+      evidenceReference: payload['evidenceReference'] as String?,
+    );
+  }
+}
+
+class GoalProgressSummary {
+  const GoalProgressSummary({
+    required this.total,
+    required this.completed,
+    required this.overdue,
+  });
+
+  final double total;
+  final bool completed, overdue;
+
+  String get status => completed
+      ? 'Completed'
+      : overdue
+      ? 'Overdue'
+      : 'Active';
+
+  factory GoalProgressSummary.fromHistory(
+    PlanningItem goal,
+    Iterable<PlanningHistoryEntry> entries,
+  ) {
+    final contributions = entries
+        .where(
+          (entry) =>
+              entry.definitionId == goal.id && entry.kind == 'goalProgress',
+        )
+        .map(GoalContribution.fromHistory);
+    final total = contributions.fold<double>(
+      0,
+      (sum, item) => sum + item.amount,
+    );
+    final today = _dateKey(DateTime.now());
+    return GoalProgressSummary(
+      total: total,
+      // Completion is derived from all attributed contributions reaching the
+      // measurable target; no single contribution can mark the goal complete.
+      completed: goal.targetValue != null && total >= goal.targetValue!,
+      overdue:
+          !(goal.targetValue != null && total >= goal.targetValue!) &&
+          goal.targetDate != null &&
+          goal.targetDate!.compareTo(today) < 0,
+    );
+  }
 }
 
 abstract interface class PlanningHistoryStore {
@@ -234,8 +318,10 @@ class DriftPlanningHistoryStore implements PlanningHistoryStore {
             final r = row.readTable(database.activityHistory);
             return PlanningHistoryEntry(
               id: r.id,
+              ownerUid: r.ownerUid,
               definitionId: r.definitionId,
               kind: r.kind,
+              visibility: RecordVisibility.values.byName(r.visibility),
               localDate: r.localDate,
               payload: r.payloadJson,
               recordedAtUtc: DateTime.fromMillisecondsSinceEpoch(
@@ -293,6 +379,7 @@ class PlanningRepository {
     String recurrence = 'once',
     List<int> weekdays = const [],
     String? targetDate,
+    String? startDate,
     double? targetValue,
     String targetUnit = '',
     RecordVisibility visibility = RecordVisibility.private,
@@ -312,6 +399,7 @@ class PlanningRepository {
       recurrence,
       weekdays,
       targetDate,
+      startDate,
       targetValue,
       targetUnit,
     );
@@ -324,6 +412,18 @@ class PlanningRepository {
       throw const OwnershipViolation();
     }
     final now = DateTime.now().toUtc();
+    final effectiveStartDate =
+        startDate ??
+        (previous == null
+            ? _dateKey(now)
+            : PlanningItem.fromRecord(previous).startDate);
+    if (kind == PlanningKind.goal &&
+        targetDate != null &&
+        targetDate.compareTo(effectiveStartDate) < 0) {
+      throw const PlanningValidationFailure(
+        'The goal deadline cannot precede its start date.',
+      );
+    }
     final recordId = id ?? _newId();
     final item = PlanningItem(
       id: recordId,
@@ -340,6 +440,7 @@ class PlanningRepository {
       recurrence: recurrence,
       weekdays: List.unmodifiable(weekdays),
       targetDate: targetDate,
+      startDate: effectiveStartDate,
       targetValue: targetValue,
       targetUnit: targetUnit.trim(),
       archived: archived,
@@ -400,6 +501,7 @@ class PlanningRepository {
         const [],
         null,
         null,
+        null,
         '',
       );
       if (task.dayOffset < 1 ||
@@ -451,6 +553,7 @@ class PlanningRepository {
             recurrence: 'once',
             weekdays: const [],
             targetDate: null,
+            startDate: _dateKey(now),
             targetValue: null,
             targetUnit: '',
             archived: false,
@@ -602,9 +705,24 @@ class PlanningRepository {
     final uid = _uid();
     await _ensureProfile(uid);
     final currentItem = await _currentDefinition(item, uid);
-    if (currentItem.kind != PlanningKind.goal || !value.isFinite || value < 0) {
+    if (currentItem.kind != PlanningKind.goal ||
+        !value.isFinite ||
+        value <= 0) {
       throw const PlanningValidationFailure(
-        'Enter a valid non-negative goal measurement.',
+        'Enter a finite positive goal contribution.',
+      );
+    }
+    final priorEntries = await history.watch(uid, currentItem.id).first;
+    final progress = GoalProgressSummary.fromHistory(currentItem, priorEntries);
+    if (progress.completed) {
+      throw const PlanningValidationFailure(
+        'This goal already reached its target and is complete.',
+      );
+    }
+    if (currentItem.targetValue != null &&
+        progress.total + value > currentItem.targetValue!) {
+      throw const PlanningValidationFailure(
+        'This contribution would exceed the remaining goal target. Enter a smaller amount.',
       );
     }
     final localDate = _dateKey(date);
@@ -658,6 +776,7 @@ class PlanningRepository {
     String recurrence,
     List<int> weekdays,
     String? targetDate,
+    String? startDate,
     double? targetValue,
     String unit,
   ) {
@@ -691,13 +810,17 @@ class PlanningRepository {
       throw const PlanningValidationFailure('Choose a valid scheduled date.');
     }
     if (kind == PlanningKind.goal &&
-        (!_validDate(targetDate) ||
+        ((targetDate != null && !_validDate(targetDate)) ||
+            (startDate != null && !_validDate(startDate)) ||
             targetValue == null ||
             !targetValue.isFinite ||
             targetValue <= 0 ||
-            unit.trim().isEmpty)) {
+            unit.trim().isEmpty ||
+            (targetDate != null &&
+                startDate != null &&
+                targetDate.compareTo(startDate) < 0))) {
       throw const PlanningValidationFailure(
-        'Goals need a target date, positive measurable target, and unit.',
+        'Goals need a positive measurable target and unit. Dates must be valid and the deadline cannot precede the start date.',
       );
     }
   }

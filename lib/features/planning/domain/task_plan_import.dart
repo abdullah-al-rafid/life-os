@@ -30,6 +30,8 @@ class TaskPlanDraft {
     required this.suggested,
     required this.visibility,
     this.scheduledMinute = 540,
+    this.scheduleInputError,
+    this.hasPreferredTime = false,
   });
 
   final String id;
@@ -46,6 +48,8 @@ class TaskPlanDraft {
   final bool suggested;
   final RecordVisibility visibility;
   final int scheduledMinute;
+  final String? scheduleInputError;
+  final bool hasPreferredTime;
 
   TaskPlanDraft copyWith({
     int? dayOffset,
@@ -61,6 +65,9 @@ class TaskPlanDraft {
     bool? suggested,
     RecordVisibility? visibility,
     int? scheduledMinute,
+    String? scheduleInputError,
+    bool clearScheduleInputError = false,
+    bool? hasPreferredTime,
   }) => TaskPlanDraft(
     id: id,
     dayOffset: dayOffset ?? this.dayOffset,
@@ -76,6 +83,10 @@ class TaskPlanDraft {
     suggested: suggested ?? this.suggested,
     visibility: visibility ?? this.visibility,
     scheduledMinute: scheduledMinute ?? this.scheduledMinute,
+    scheduleInputError: clearScheduleInputError
+        ? null
+        : scheduleInputError ?? this.scheduleInputError,
+    hasPreferredTime: hasPreferredTime ?? this.hasPreferredTime,
   );
 }
 
@@ -88,6 +99,7 @@ class TaskPlanProposal {
     required this.tasks,
     required this.warnings,
     required this.format,
+    this.occupiedMinutesByDate = const {},
   });
 
   final String fileName;
@@ -97,9 +109,123 @@ class TaskPlanProposal {
   final List<TaskPlanDraft> tasks;
   final List<String> warnings;
   final String format;
+  final Map<String, int> occupiedMinutesByDate;
 
   List<String> get dates =>
       List.generate(15, (i) => _dateKey(startDate.add(Duration(days: i))));
+
+  Map<int, int> get taskMinutesByDay {
+    final totals = <int, int>{};
+    for (final task in tasks) {
+      totals.update(
+        task.dayOffset,
+        (minutes) => minutes + task.durationMinutes,
+        ifAbsent: () => task.durationMinutes,
+      );
+    }
+    return totals;
+  }
+
+  int existingMinutesOnDay(int day) =>
+      occupiedMinutesByDate[dates[day - 1]] ?? 0;
+
+  int totalMinutesOnDay(int day) =>
+      (taskMinutesByDay[day] ?? 0) + existingMinutesOnDay(day);
+
+  List<int> get overloadedDays => [
+    for (var day = 1; day <= 15; day++)
+      if (totalMinutesOnDay(day) > dailyCapacityMinutes) day,
+  ];
+
+  List<String> get scheduleConflicts => _preferredTimeConflicts(tasks);
+
+  TaskPlanProposal withTasks(List<TaskPlanDraft> editedTasks) {
+    final normalized = editedTasks
+        .map(
+          (task) => task.copyWith(
+            date: task.dayOffset >= 1 && task.dayOffset <= 15
+                ? _dateKey(startDate.add(Duration(days: task.dayOffset - 1)))
+                : task.date,
+          ),
+        )
+        .toList(growable: false);
+    final retained = warnings.where(
+      (warning) =>
+          (!warning.contains('imported minutes and') ||
+              !warning.contains('daily limit')) &&
+          !warning.startsWith('Some days have no source task.') &&
+          !warning.startsWith('Preferred time conflict:'),
+    );
+    final refreshed = [...retained];
+    for (var day = 1; day <= 15; day++) {
+      final imported = normalized
+          .where((task) => task.dayOffset == day)
+          .fold<int>(0, (minutes, task) => minutes + task.durationMinutes);
+      final existing = existingMinutesOnDay(day);
+      final combined = imported + existing;
+      if (combined > dailyCapacityMinutes) {
+        refreshed.add(
+          'Day $day has $imported imported minutes and $existing minutes of existing commitments, exceeding the $dailyCapacityMinutes-minute daily limit by ${combined - dailyCapacityMinutes} minutes. Reassign tasks or increase daily capacity.',
+        );
+      }
+    }
+    if (normalized.map((task) => task.dayOffset).toSet().length < 15) {
+      refreshed.add(
+        'Some days have no source task. Review all 15 days and add or reassign tasks if every day needs work.',
+      );
+    }
+    refreshed.addAll(_preferredTimeConflicts(normalized));
+    return TaskPlanProposal(
+      fileName: fileName,
+      fingerprint: fingerprint,
+      startDate: startDate,
+      dailyCapacityMinutes: dailyCapacityMinutes,
+      tasks: normalized,
+      warnings: List.unmodifiable(refreshed.toSet()),
+      format: format,
+      occupiedMinutesByDate: occupiedMinutesByDate,
+    );
+  }
+
+  void validateForApproval() {
+    if (tasks.isEmpty) {
+      throw const TaskPlanImportFailure(
+        'Add at least one task before importing.',
+      );
+    }
+    for (final task in tasks) {
+      if (task.title.trim().isEmpty || task.category.trim().isEmpty) {
+        throw const TaskPlanImportFailure(
+          'Every task needs a title and category before approval.',
+        );
+      }
+      if (task.dayOffset < 1 || task.dayOffset > 15) {
+        throw TaskPlanImportFailure(
+          'Task "${task.title}" must be assigned to a day from 1 to 15.',
+        );
+      }
+      if (task.durationMinutes < 1 || task.durationMinutes > 1440) {
+        throw TaskPlanImportFailure(
+          'Task "${task.title}" needs a duration from 1 to 1440 minutes.',
+        );
+      }
+      if (task.scheduleInputError != null) {
+        throw TaskPlanImportFailure(task.scheduleInputError!);
+      }
+      if (task.hasPreferredTime &&
+          task.scheduledMinute + task.durationMinutes > 1440) {
+        throw TaskPlanImportFailure(
+          'Task "${task.title}" extends past midnight. Change its preferred time or duration.',
+        );
+      }
+      if (task.date != dates[task.dayOffset - 1]) {
+        throw TaskPlanImportFailure(
+          'Task "${task.title}" has a date that does not match its assigned plan day.',
+        );
+      }
+    }
+    TaskPlanImporter.validateTaskList(tasks);
+  }
 }
 
 class TaskPlanCommitment {
@@ -182,7 +308,21 @@ class TaskPlanImporter {
       case 'csv':
         planStart = startDate ?? _today();
         capacity = dailyCapacityMinutes ?? 120;
-        tasks = _parseCsv(_decodeText(bytes), planStart, warnings);
+        try {
+          tasks = _parseCsv(
+            _decodeText(bytes),
+            planStart,
+            capacity,
+            warnings,
+            _occupancy(planStart, occupiedMinutesByDate, existingCommitments),
+          );
+        } on TaskPlanImportFailure {
+          rethrow;
+        } on FormatException {
+          throw const TaskPlanImportFailure(
+            'Could not parse the CSV structure. Check quoting and row separators, then save as UTF-8 CSV.',
+          );
+        }
       case 'txt':
         planStart = startDate ?? _today();
         capacity = dailyCapacityMinutes ?? 120;
@@ -236,13 +376,13 @@ class TaskPlanImporter {
         .toList(growable: false);
     _validateDependencies(tasks);
     _validateDuplicates(tasks);
-    _checkCapacity(
-      tasks,
-      capacity,
-      warnings,
-      _occupancy(planStart, occupiedMinutesByDate, existingCommitments),
+    final occupied = _occupancy(
       planStart,
+      occupiedMinutesByDate,
+      existingCommitments,
     );
+    _checkCapacity(tasks, capacity, warnings, occupied, planStart);
+    warnings.addAll(_preferredTimeConflicts(tasks));
     if (tasks.map((t) => t.dayOffset).toSet().length < 15) {
       warnings.add(
         'Some days have no source task. Review all 15 days and add or reassign tasks if every day needs work.',
@@ -256,6 +396,7 @@ class TaskPlanImporter {
       tasks: tasks,
       warnings: List.unmodifiable(warnings.toSet()),
       format: ext.toUpperCase(),
+      occupiedMinutesByDate: Map.unmodifiable(occupied),
     );
   }
 
@@ -343,11 +484,29 @@ class TaskPlanImporter {
       if (headerRow == null) {
         throw const TaskPlanImportFailure('The Tasks sheet has no header row.');
       }
-      final headers = {
-        for (final entry in headerRow.entries) _header(entry.value): entry.key,
-      };
+      final headers = <String, int>{};
+      for (final entry in headerRow.entries) {
+        final normalized = _header(entry.value);
+        if (normalized.isEmpty) continue;
+        if (headers.containsKey(normalized)) {
+          throw TaskPlanImportFailure(
+            'Tasks sheet header "${entry.value}" is duplicated or ambiguous.',
+          );
+        }
+        headers[normalized] = entry.key;
+      }
       int? column(String name) => headers[_header(name)];
-      final titleCol = column('Task Title *') ?? column('Task Title');
+      int? columnOneOf(List<String> names) {
+        final matches = names.map(column).whereType<int>().toSet();
+        if (matches.length > 1) {
+          throw TaskPlanImportFailure(
+            'Tasks sheet has multiple columns for ${names.join(' / ')}.',
+          );
+        }
+        return matches.firstOrNull;
+      }
+
+      final titleCol = columnOneOf(['Task Title *', 'Task Title']);
       final dayCol = column('Day Offset (1-15)');
       if (titleCol == null || dayCol == null) {
         throw const TaskPlanImportFailure(
@@ -361,12 +520,27 @@ class TaskPlanImporter {
         final value = entry.value[1]?.trim() ?? '';
         if (key.isNotEmpty && value.isNotEmpty) brief[key] = value;
       }
-      final start = _parseDate(brief['Preferred start date (optional)']);
-      final capacity = int.tryParse(
-        brief['Available time per day (minutes)'] ?? '',
-      );
+      final briefStartValue =
+          brief['Preferred start date (optional)']?.trim() ?? '';
+      final start = _parseDate(briefStartValue);
+      if (briefStartValue.isNotEmpty && start == null) {
+        throw const TaskPlanImportFailure(
+          'Source Brief has an invalid preferred start date. Use YYYY-MM-DD.',
+        );
+      }
+      final capacityValue =
+          brief['Available time per day (minutes)']?.trim() ?? '';
+      final capacity = capacityValue.isEmpty
+          ? null
+          : int.tryParse(capacityValue);
+      if (capacityValue.isNotEmpty && capacity == null) {
+        throw const TaskPlanImportFailure(
+          'Source Brief daily capacity must be a whole number of minutes.',
+        );
+      }
       final tasks = <TaskPlanDraft>[];
-      final rowRefs = <String, TaskPlanDraft>{};
+      final idRefs = <String, String>{};
+      final titleRefs = <String, List<String>>{};
       final rawDependencies = <String, String>{};
       final rows = taskSheet.entries.where((e) => e.key > 4).toList()
         ..sort((a, b) => a.key.compareTo(b.key));
@@ -383,8 +557,16 @@ class TaskPlanImporter {
             'Task row ${entry.key} must use a Day Offset from 1 to 15.',
           );
         }
-        final duration = _optionalInt(row[column('Estimated Minutes')]) ?? 30;
-        if ((row[column('Estimated Minutes')] ?? '').isEmpty) {
+        final durationValue = row[column('Estimated Minutes')] ?? '';
+        final duration = durationValue.trim().isEmpty
+            ? 30
+            : int.tryParse(durationValue.trim());
+        if (duration == null) {
+          throw TaskPlanImportFailure(
+            'Task row ${entry.key} has a non-numeric estimate. Use whole minutes.',
+          );
+        }
+        if (durationValue.trim().isEmpty) {
           warnings.add(
             'One or more task rows omit an estimate; a 30-minute default was used. Review workload before importing.',
           );
@@ -405,6 +587,16 @@ class TaskPlanImporter {
           );
         }
         final sourceId = 'row:${entry.key}';
+        final suppliedId = _nonEmpty(row[column('Task ID')], sourceId);
+        final normalizedId = _header(suppliedId);
+        if (idRefs.containsKey(normalizedId)) {
+          throw TaskPlanImportFailure(
+            'Task row ${entry.key} repeats task ID "$suppliedId".',
+          );
+        }
+        idRefs[normalizedId] = sourceId;
+        idRefs[_header(sourceId)] = sourceId;
+        titleRefs.putIfAbsent(_header(title), () => []).add(sourceId);
         final draft = TaskPlanDraft(
           id: sourceId,
           dayOffset: day,
@@ -412,7 +604,10 @@ class TaskPlanImporter {
           title: title,
           description: row[column('Description / Outcome')] ?? '',
           category: _nonEmpty(row[column('Category')], 'Other'),
-          priority: _priority(row[column('Priority')]),
+          priority: _parsePriority(
+            row[column('Priority')],
+            source: 'Task row ${entry.key}',
+          ),
           durationMinutes: duration,
           completionCriteria: row[column('Description / Outcome')] ?? '',
           dependencies: const [],
@@ -422,11 +617,15 @@ class TaskPlanImporter {
           ),
           suggested: false,
           visibility: _visibility(row[column('Visibility')]),
-          scheduledMinute: _parsePreferredTime(row[column('Preferred Time')]),
+          scheduledMinute: _parsePreferredTime(
+            row[column('Preferred Time')],
+            source: 'Task row ${entry.key}',
+          ),
+          hasPreferredTime: (row[column('Preferred Time')] ?? '')
+              .trim()
+              .isNotEmpty,
         );
         tasks.add(draft);
-        rowRefs[sourceId] = draft;
-        rowRefs[_header(title)] = draft;
         final dependency = row[column('Depends on Task ID')];
         if (dependency != null && dependency.trim().isNotEmpty) {
           rawDependencies[sourceId] = dependency.trim();
@@ -436,14 +635,21 @@ class TaskPlanImporter {
           .map((task) {
             final dependency = rawDependencies[task.id];
             if (dependency == null) return task;
-            final parent = rowRefs[dependency] ?? rowRefs[_header(dependency)];
-            if (parent == null) {
-              warnings.add(
-                'Dependency "$dependency" for ${task.title} was not matched to a task title or row reference.',
-              );
-              return task.copyWith(dependencies: [dependency]);
-            }
-            return task.copyWith(dependencies: [parent.id]);
+            return task.copyWith(
+              dependencies: dependency
+                  .split(';')
+                  .map((reference) => reference.trim())
+                  .where((reference) => reference.isNotEmpty)
+                  .map(
+                    (reference) => _resolveDependency(
+                      reference,
+                      idRefs,
+                      titleRefs,
+                      task.title,
+                    ),
+                  )
+                  .toList(growable: false),
+            );
           })
           .toList(growable: false);
       return _WorkbookBrief(
@@ -468,22 +674,36 @@ class TaskPlanImporter {
   List<TaskPlanDraft> _parseCsv(
     String text,
     DateTime start,
+    int capacity,
     List<String> warnings,
+    Map<String, int> occupiedMinutesByDate,
   ) {
     final rows = csv.decode(text);
     if (rows.isEmpty) {
       throw const TaskPlanImportFailure('The CSV contains no rows.');
     }
-    final headers = {
-      for (var i = 0; i < rows.first.length; i++)
-        _header('${rows.first[i]}'): i,
-    };
-    int? col(List<String> names) {
-      for (final name in names) {
-        final value = headers[_header(name)];
-        if (value != null) return value;
+    final headers = <String, int>{};
+    for (var i = 0; i < rows.first.length; i++) {
+      final normalized = _header('${rows.first[i]}');
+      if (normalized.isEmpty) continue;
+      if (headers.containsKey(normalized)) {
+        throw TaskPlanImportFailure(
+          'CSV header "${rows.first[i]}" is duplicated or ambiguous.',
+        );
       }
-      return null;
+      headers[normalized] = i;
+    }
+    int? col(List<String> names) {
+      final matches = names
+          .map((name) => headers[_header(name)])
+          .whereType<int>()
+          .toSet();
+      if (matches.length > 1) {
+        throw TaskPlanImportFailure(
+          'CSV has multiple columns for the same field (${names.join(', ')}). Keep one column.',
+        );
+      }
+      return matches.firstOrNull;
     }
 
     final titleCol = col(['Task Title', 'Title', 'Task']);
@@ -492,7 +712,15 @@ class TaskPlanImporter {
         'CSV must include a Task Title, Title, or Task column.',
       );
     }
-    if (col(['Day Offset', 'Day', 'Day Number']) == null) {
+    final dayCol = col([
+      'Day Offset',
+      'Day',
+      'Day Number',
+      'Plan Day',
+      'Day Offset (1-15)',
+    ]);
+    final dateCol = col(['Date', 'Task Date', 'Scheduled Date']);
+    if (dayCol == null && dateCol == null) {
       warnings.add(
         'CSV has no day column; source tasks are assigned in order across the 15-day window.',
       );
@@ -508,8 +736,9 @@ class TaskPlanImporter {
       );
     }
     final tasks = <TaskPlanDraft>[];
-    final dependenciesById = <String, String>{};
-    final aliases = <String, String>{};
+    final dependenciesById = <String, List<String>>{};
+    final idAliases = <String, String>{};
+    final titleAliases = <String, List<String>>{};
     for (var i = 1; i < rows.length; i++) {
       final row = rows[i];
       if (row.every((v) => '$v'.trim().isEmpty)) continue;
@@ -524,22 +753,71 @@ class TaskPlanImporter {
       if (title.isEmpty) {
         throw TaskPlanImportFailure('CSV row ${i + 1} has no task title.');
       }
-      final offset =
-          int.tryParse(read(['Day Offset', 'Day', 'Day Number'])) ??
-          tasks.length % 15 + 1;
-      if (offset < 1 || offset > 15) {
+      final durationValue = read([
+        'Estimated Minutes',
+        'Duration',
+        'Duration Minutes',
+      ]);
+      final duration = durationValue.isEmpty ? 30 : int.tryParse(durationValue);
+      if (duration == null) {
         throw TaskPlanImportFailure(
-          'CSV row ${i + 1} has a Day Offset outside 1–15.',
+          'CSV row ${i + 1} has a non-numeric duration "$durationValue". Use whole minutes.',
         );
       }
-      final duration =
-          int.tryParse(
-            read(['Estimated Minutes', 'Duration', 'Duration Minutes']),
-          ) ??
-          30;
       if (duration < 1 || duration > 1440) {
         throw TaskPlanImportFailure(
           'CSV row ${i + 1} has an invalid duration.',
+        );
+      }
+      final dayValue = read([
+        'Day Offset',
+        'Day',
+        'Day Number',
+        'Plan Day',
+        'Day Offset (1-15)',
+      ]);
+      final dateValue = read(['Date', 'Task Date', 'Scheduled Date']);
+      final offsetFromDay = dayValue.isEmpty ? null : int.tryParse(dayValue);
+      final offsetFromDate = dateValue.isEmpty
+          ? null
+          : _dateOffset(dateValue, start);
+      if (dayValue.isNotEmpty && offsetFromDay == null) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} has an invalid day offset "$dayValue". Use 1–15.',
+        );
+      }
+      if (dateValue.isNotEmpty && offsetFromDate == null) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} has an invalid date "$dateValue". Use YYYY-MM-DD.',
+        );
+      }
+      if (offsetFromDay != null &&
+          offsetFromDate != null &&
+          offsetFromDay != offsetFromDate) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} has conflicting day and date assignments.',
+        );
+      }
+      final offset =
+          offsetFromDay ??
+          offsetFromDate ??
+          (dayCol == null && dateCol == null
+              ? _capacityAwareDay(
+                  tasks,
+                  duration: duration,
+                  capacity: capacity,
+                  startDate: start,
+                  occupiedMinutesByDate: occupiedMinutesByDate,
+                )
+              : null);
+      if (offset == null) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} has an invalid day/date value "$dayValue".',
+        );
+      }
+      if (offset < 1 || offset > 15) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} has a Day Offset outside 1–15.',
         );
       }
       final description = read([
@@ -556,36 +834,65 @@ class TaskPlanImporter {
           title: title,
           description: description,
           category: read(['Category'], 'Other'),
-          priority: _priority(read(['Priority'], 'Medium')),
+          priority: _parsePriority(
+            read(['Priority']),
+            source: 'CSV row ${i + 1}',
+          ),
           durationMinutes: duration,
           completionCriteria: read([
             'Completion Criteria',
             'Outcome',
           ], description),
           dependencies: const [],
-          sourceReference: 'CSV row ${i + 1}',
+          sourceReference: read(['Source Reference'], 'CSV row ${i + 1}'),
           suggested: false,
           visibility: _visibility(read(['Visibility'], 'Private')),
+          scheduledMinute: _parsePreferredTime(
+            read(['Preferred Time']),
+            source: 'CSV row ${i + 1}',
+          ),
+          hasPreferredTime: read(['Preferred Time']).isNotEmpty,
         ),
       );
-      aliases[_header(read(['Task ID', 'ID'], taskId))] = taskId;
-      aliases.putIfAbsent(_header(title), () => taskId);
+      final suppliedId = read(['Task ID', 'ID', 'Task ID (unique)']);
+      final idAlias = _header(suppliedId.isEmpty ? taskId : suppliedId);
+      if (idAliases.containsKey(idAlias)) {
+        throw TaskPlanImportFailure(
+          'CSV row ${i + 1} repeats task ID "${suppliedId.isEmpty ? taskId : suppliedId}".',
+        );
+      }
+      idAliases[idAlias] = taskId;
+      titleAliases.putIfAbsent(_header(title), () => []).add(taskId);
       final dependency = read([
         'Depends On Task ID',
+        'Depends On',
+        'Depends On Task Id',
         'Dependency',
         'Dependencies',
       ]);
-      if (dependency.isNotEmpty) dependenciesById[taskId] = dependency;
+      final dependencies = dependency
+          .split(';')
+          .map((reference) => reference.trim())
+          .where((reference) => reference.isNotEmpty)
+          .toList(growable: false);
+      if (dependencies.isNotEmpty) dependenciesById[taskId] = dependencies;
     }
     return tasks
         .map((task) {
           final dependency = dependenciesById[task.id];
           if (dependency == null) return task;
-          final parent = aliases[_header(dependency)];
-          if (parent == null) {
-            return task.copyWith(dependencies: ['unresolved:$dependency']);
-          }
-          return task.copyWith(dependencies: [parent]);
+          return task.copyWith(
+            dependencies: dependency
+                .map(
+                  (reference) => _resolveDependency(
+                    reference,
+                    idAliases,
+                    titleAliases,
+                    task.title,
+                  ),
+                )
+                .toList(growable: false),
+          );
         })
         .toList(growable: false);
   }
@@ -848,6 +1155,12 @@ class TaskPlanImporter {
 
   static void _validateDependencies(List<TaskPlanDraft> tasks) {
     final byId = {for (final task in tasks) task.id: task};
+    if (byId.length != tasks.length ||
+        tasks.any((task) => task.id.trim().isEmpty)) {
+      throw const TaskPlanImportFailure(
+        'The preview contains a missing or duplicate task ID.',
+      );
+    }
     final indexById = {for (var i = 0; i < tasks.length; i++) tasks[i].id: i};
     for (var currentIndex = 0; currentIndex < tasks.length; currentIndex++) {
       final task = tasks[currentIndex];
@@ -883,6 +1196,11 @@ class TaskPlanImporter {
     }
   }
 
+  static void validateTaskList(List<TaskPlanDraft> tasks) {
+    _validateDependencies(tasks);
+    _validateDuplicates(tasks);
+  }
+
   static void _validateDuplicates(List<TaskPlanDraft> tasks) {
     final seen = <String>{};
     for (final task in tasks) {
@@ -910,22 +1228,95 @@ class TaskPlanImporter {
         ifAbsent: () => task.durationMinutes,
       );
     }
-    for (final entry in totals.entries.where((e) => e.value > capacity)) {
+    for (var day = 1; day <= 15; day++) {
+      final imported = totals[day] ?? 0;
+      final date = _dateKey(startDate.add(Duration(days: day - 1)));
+      final existing = occupiedMinutesByDate[date] ?? 0;
+      final combined = existing + imported;
+      if (combined <= capacity) continue;
       warnings.add(
-        'Day ${entry.key} is ${entry.value - capacity} minutes over the available $capacity-minute daily limit. Reassign or reduce tasks.',
+        'Day $day has $imported imported minutes and $existing minutes of existing commitments, exceeding the $capacity-minute daily limit by ${combined - capacity} minutes. Reassign tasks or increase daily capacity.',
       );
     }
-    for (final entry in totals.entries) {
-      final date = _dateKey(startDate.add(Duration(days: entry.key - 1)));
-      final existing = occupiedMinutesByDate[date] ?? 0;
-      final combined = existing + entry.value;
-      if (combined > capacity) {
-        warnings.add(
-          'Day ${entry.key} has $existing minutes of existing commitments plus ${entry.value} imported minutes, exceeding the $capacity-minute daily limit by ${combined - capacity} minutes. Reassign or reduce tasks.',
+  }
+}
+
+int _capacityAwareDay(
+  List<TaskPlanDraft> assigned, {
+  required int duration,
+  required int capacity,
+  required DateTime startDate,
+  required Map<String, int> occupiedMinutesByDate,
+}) {
+  final totals = List<int>.filled(15, 0);
+  for (final task in assigned) {
+    totals[task.dayOffset - 1] += task.durationMinutes;
+  }
+  final preferred = assigned.length % 15;
+  for (var step = 0; step < 15; step++) {
+    final day = (preferred + step) % 15;
+    final date = _dateKey(startDate.add(Duration(days: day)));
+    if ((occupiedMinutesByDate[date] ?? 0) + totals[day] + duration <=
+        capacity) {
+      return day + 1;
+    }
+  }
+  return List.generate(15, (index) => index).reduce((a, b) {
+        final aDate = _dateKey(startDate.add(Duration(days: a)));
+        final bDate = _dateKey(startDate.add(Duration(days: b)));
+        final aLoad = (occupiedMinutesByDate[aDate] ?? 0) + totals[a];
+        final bLoad = (occupiedMinutesByDate[bDate] ?? 0) + totals[b];
+        return aLoad <= bLoad ? a : b;
+      }) +
+      1;
+}
+
+int? _dateOffset(String value, DateTime start) {
+  final date = _parseDate(value);
+  if (date == null) return null;
+  return date.difference(DateTime(start.year, start.month, start.day)).inDays +
+      1;
+}
+
+String _resolveDependency(
+  String reference,
+  Map<String, String> ids,
+  Map<String, List<String>> titles,
+  String taskTitle,
+) {
+  final normalized = _header(reference);
+  final byId = ids[normalized];
+  if (byId != null) return byId;
+  final matches = titles[normalized] ?? const <String>[];
+  if (matches.length > 1) {
+    throw TaskPlanImportFailure(
+      'Dependency "$reference" for "$taskTitle" matches multiple task titles. Use a unique Task ID.',
+    );
+  }
+  return matches.singleOrNull ?? 'unresolved:$reference';
+}
+
+List<String> _preferredTimeConflicts(List<TaskPlanDraft> tasks) {
+  final conflicts = <String>[];
+  for (var i = 0; i < tasks.length; i++) {
+    final first = tasks[i];
+    if (!first.hasPreferredTime) continue;
+    final firstEnd = first.scheduledMinute + first.durationMinutes;
+    for (var j = i + 1; j < tasks.length; j++) {
+      final second = tasks[j];
+      if (!second.hasPreferredTime || first.dayOffset != second.dayOffset) {
+        continue;
+      }
+      final secondEnd = second.scheduledMinute + second.durationMinutes;
+      if (first.scheduledMinute < secondEnd &&
+          second.scheduledMinute < firstEnd) {
+        conflicts.add(
+          'Preferred time conflict: "${first.title}" and "${second.title}" overlap on Day ${first.dayOffset}. Adjust a preferred time or acknowledge if the overlap is intentional.',
         );
       }
     }
   }
+  return conflicts;
 }
 
 Set<int> _unavailableDayOffsets(String input, DateTime start) {
@@ -1101,24 +1492,46 @@ String _header(String value) =>
     value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 String _nonEmpty(String? value, String fallback) =>
     value == null || value.trim().isEmpty ? fallback : value.trim();
-int? _optionalInt(String? value) => value == null || value.trim().isEmpty
-    ? null
-    : double.tryParse(value.trim())?.round();
-int _priority(String? value) => switch ((value ?? '').trim().toLowerCase()) {
-  'high' => 1,
-  'low' => 3,
-  _ => 2,
-};
+int _parsePriority(String? value, {required String source}) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  return switch (normalized) {
+    '' || 'medium' || 'normal' || '2' => 2,
+    'high' || '1' => 1,
+    'low' || '3' => 3,
+    _ => throw TaskPlanImportFailure(
+      '$source has an unknown priority "$value". Use High, Medium, or Low.',
+    ),
+  };
+}
+
 RecordVisibility _visibility(String? value) =>
     (value ?? '').trim().toLowerCase() == 'shared'
     ? RecordVisibility.shared
     : RecordVisibility.private;
-int _parsePreferredTime(String? value) {
-  final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value?.trim() ?? '');
-  if (match == null) return 540;
+int _parsePreferredTime(String? value, {String source = 'Task'}) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  final preset = switch (normalized) {
+    'morning' => 540,
+    'afternoon' => 840,
+    'evening' => 1080,
+    _ => null,
+  };
+  if (preset != null) return preset;
+  if (normalized.isEmpty) return 540;
+  final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(normalized);
+  if (match == null) {
+    throw TaskPlanImportFailure(
+      '$source has an invalid preferred time "$value". Use a preset or HH:MM.',
+    );
+  }
   final hour = int.parse(match.group(1)!);
   final minute = int.parse(match.group(2)!);
-  return hour < 24 && minute < 60 ? hour * 60 + minute : 540;
+  if (hour >= 24 || minute >= 60) {
+    throw TaskPlanImportFailure(
+      '$source has an invalid preferred time "$value". Use 00:00–23:59.',
+    );
+  }
+  return hour * 60 + minute;
 }
 
 DateTime? _parseDate(String? input) {

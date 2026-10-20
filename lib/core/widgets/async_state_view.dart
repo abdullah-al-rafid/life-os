@@ -29,25 +29,27 @@ class EmptyStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SurfaceCard(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: AppColors.cyan, size: 28),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          message,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          textAlign: TextAlign.center,
-        ),
-      ],
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.cyan, size: 28),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            message,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -59,21 +61,23 @@ class ErrorStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SurfaceCard(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.error_outline, color: Color(0xFFFF7D91), size: 28),
-        const SizedBox(height: AppSpacing.md),
-        Text(message, textAlign: TextAlign.center),
-        if (onRetry != null) ...[
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Color(0xFFFF7D91), size: 28),
           const SizedBox(height: AppSpacing.md),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Try again'),
-          ),
+          Text(message, textAlign: TextAlign.center),
+          if (onRetry != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try again'),
+            ),
+          ],
         ],
-      ],
+      ),
     ),
   );
 }

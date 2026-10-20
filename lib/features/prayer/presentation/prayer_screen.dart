@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../records/domain/life_record.dart';
 import '../../tracking/domain/tracking_entry.dart';
@@ -62,9 +63,9 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Local prayer times and dated records · Cloud sync off',
-                          style: Theme.of(context).textTheme.bodySmall,
+                        const PrivacySourceLabel(
+                          source: PrivacySource.privateLocal,
+                          details: 'Prayer records stay on this device',
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _DateSelector(

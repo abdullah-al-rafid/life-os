@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../data/usage_stats_service.dart';
 
@@ -82,6 +83,22 @@ class _ScreenTimeScreenState extends State<ScreenTimeScreen>
       children: [
         const Text(
           'Usage data stays on this device. LIFE OS reads it only after Android Usage Access is granted.',
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Screen Time sharing is off. Usage is not uploaded or shown to the other account; sharing requires verified account setup and explicit consent.',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const PrivacySourceLabel(
+                source: PrivacySource.localOnly,
+                details: 'Android Usage Access required',
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         SurfaceCard(

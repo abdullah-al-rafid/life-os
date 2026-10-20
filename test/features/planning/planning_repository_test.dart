@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -245,6 +246,103 @@ void main() {
   });
 
   test(
+    'private goals stay private while shared goal contributions retain author history',
+    () async {
+      final privateGoal = await repository.save(
+        kind: PlanningKind.goal,
+        title: 'Personal reading',
+        targetValue: 10,
+        targetUnit: 'books',
+      );
+      final sharedGoal = await repository.save(
+        kind: PlanningKind.goal,
+        title: 'Read together',
+        description: 'Shared local goal',
+        startDate: '2026-10-01',
+        targetDate: null,
+        targetValue: 10,
+        targetUnit: 'books',
+        visibility: RecordVisibility.shared,
+      );
+
+      identity.switchTo('uid-b');
+      final visible = await repository
+          .watchItems(kind: PlanningKind.goal)
+          .first;
+      expect(visible.map((item) => item.id), [sharedGoal.id]);
+      await repository.addGoalProgress(
+        visible.single,
+        DateTime(2026, 10, 14),
+        4,
+        notes: 'First contribution',
+      );
+      var history = await repository
+          .watchHistory(definitionId: sharedGoal.id)
+          .first;
+      expect(history.single.ownerUid, 'uid-b');
+      expect(
+        GoalProgressSummary.fromHistory(sharedGoal, history).completed,
+        isFalse,
+      );
+
+      identity.switchTo('uid-a');
+      await repository.addGoalProgress(
+        sharedGoal,
+        DateTime(2026, 10, 15),
+        6,
+        notes: 'Target reached by both',
+      );
+      history = await repository
+          .watchHistory(definitionId: sharedGoal.id)
+          .first;
+      expect(
+        history.map((entry) => entry.ownerUid),
+        containsAll(['uid-a', 'uid-b']),
+      );
+      final summary = GoalProgressSummary.fromHistory(sharedGoal, history);
+      expect(summary.total, 10);
+      expect(summary.completed, isTrue);
+      expect(sharedGoal.startDate, '2026-10-01');
+      expect(privateGoal.visibility, RecordVisibility.private);
+    },
+  );
+
+  test(
+    'goal contributions reject invalid, overshooting and post-completion progress',
+    () async {
+      final goal = await repository.save(
+        kind: PlanningKind.goal,
+        title: 'Run distance',
+        targetValue: 5,
+        targetUnit: 'km',
+        visibility: RecordVisibility.shared,
+      );
+      await expectLater(
+        repository.addGoalProgress(goal, DateTime(2026, 10, 14), double.nan),
+        throwsA(isA<PlanningValidationFailure>()),
+      );
+      await expectLater(
+        repository.addGoalProgress(goal, DateTime(2026, 10, 14), -1),
+        throwsA(isA<PlanningValidationFailure>()),
+      );
+      await repository.addGoalProgress(goal, DateTime(2026, 10, 14), 3);
+      await expectLater(
+        repository.addGoalProgress(goal, DateTime(2026, 10, 14), 3),
+        throwsA(isA<PlanningValidationFailure>()),
+      );
+      await repository.addGoalProgress(goal, DateTime(2026, 10, 15), 2);
+      await expectLater(
+        repository.addGoalProgress(goal, DateTime(2026, 10, 16), 1),
+        throwsA(isA<PlanningValidationFailure>()),
+      );
+      expect(
+        await repository.watchHistory(definitionId: goal.id).first,
+        hasLength(2),
+      );
+    },
+  );
+
+  test(
     'approved 15-day plan saves dated tasks and duplicate approval preserves history',
     () async {
       final start = DateTime(2026, 10, 14);
@@ -295,6 +393,34 @@ void main() {
         (await repository.watchItems(kind: PlanningKind.task).first),
         hasLength(15),
       );
+    },
+  );
+
+  test(
+    'approved preview edits and day reassignment reach saved records',
+    () async {
+      final start = DateTime(2026, 10, 14);
+      final proposal = await TaskPlanImporter().parse(
+        fileName: 'edited.csv',
+        bytes: utf8.encode(
+          'plan_day,title,estimated_minutes\n1,Keep day one,30\n2,Move me,30',
+        ),
+        startDate: start,
+      );
+      final edited = proposal.withTasks([
+        proposal.tasks.first,
+        proposal.tasks.last.copyWith(dayOffset: 15, title: 'Edited and moved'),
+      ]);
+      edited.validateForApproval();
+
+      final saved = await repository.importPlan(
+        sourceFingerprint: 'edited-preview-fingerprint',
+        startDate: start,
+        tasks: edited.tasks,
+      );
+      expect(saved.last.title, 'Edited and moved');
+      expect(saved.last.scheduledDate, '2026-10-28');
+      expect(saved.last.durationMinutes, 30);
     },
   );
 

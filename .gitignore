@@ -51,3 +51,28 @@ app.*.map.json
 /android/app/release
 
 node_modules/
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# Local debug and diagnostic logs
+*.log
+
+# Local credentials, signing material, private backups, exports, and generated artifacts
+.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+service-account*.json
+*-service-account*.json
+/README_PRIVATE_BACKUP.md
+*.apk
+*.aab
+*.db
+*.sqlite
+*.sqlite3
+/exports/
+/personal-exports/

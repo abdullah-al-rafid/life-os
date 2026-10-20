@@ -1,94 +1,84 @@
 # LIFE OS
 
-Android-first personal life management app for Abdullah Al Rafid and Jannat. The app provides responsive UI, Firebase email/password authentication, offline-first Drift/SQLite storage, local task/routine/goal/habit workflows, prayer and wellness tracking, prayer reminders, and a local File-to-15-Day Task Planner. Task completion supports optional private local evidence attachments. Android Screen Time summaries are available only after the user grants Usage Access. Rolling planning is a limited carryover proposal. PDF reports, JSON backup/restore, complete adaptive planning, and remote synchronization are not implemented.
+LIFE OS is an Android-first personal life-management app built with Flutter. It combines local planning and tracking with opt-in prayer reminders. The project is an active prototype; it has not been reviewed or configured for production use.
 
-## Project documents
+## What works today
 
-- [Complete requirements](docs/PROJECT_SPEC.md)
-- [Implementation status](docs/IMPLEMENTATION_STATUS.md)
-- [Architecture decisions](docs/DECISIONS.md)
+- Local tasks, routines, goals, habits, completion history, and measurements stored in Drift/SQLite.
+- Import and review of 15-day task plans from supported files, plus an approval-based rolling carryover proposal. Import and carryover remain local.
+- Manual prayer schedules, prayer logs, and optional Android reminders. LIFE OS does not calculate prayer times.
+- Local fasting, sleep, and workout records; task-completion evidence files stored on-device.
+- A local JSON backup and restore flow for the signed-in account's app records. Evidence file contents are excluded; restore behavior should be reviewed before relying on it as a disaster-recovery system.
+- Fifteen-day PDF report preview, save, print, and share.
+- Android app-usage summaries after the user grants Android Usage Access.
+- Firebase email/password authentication code and protected app routes. There is no public account-creation screen.
 
-## Project structure
+## Experimental and unavailable
 
-```text
-lib/
-  app/       app entry, router, and design tokens/theme
-  core/      reusable UI primitives, state views, and database
-  features/  feature-oriented screens and repositories (auth, dashboard, navigation, planning, prayer, records, tracking)
-functions/   server-side Identity Platform account allowlist
-test/        critical widget coverage
-docs/        requirements, status, and architecture decisions
-```
+- Assigned-task sharing has a Firestore adapter and local security rules, but its feature flag is off by default. It is not a supported production synchronization feature.
+- General personal-record synchronization is not implemented. Personal records, history, evidence, backups, and reports remain local.
+- Android notification delivery and Usage Access need device-level verification. Database encryption, evidence cleanup after task deletion, and complete adaptive planning are not implemented.
+- Firebase project setup, account restrictions, deployed rules, and trusted member records are not verified for production.
+- The Android release build currently uses the debug signing configuration and the example application ID `com.example.life_os`; it is not a store-ready release package.
 
-The responsive shell uses bottom navigation on compact widths and a persistent side navigation on wide layouts. Home, Plan, Goals, Insights, and Settings are available. Home and Plan have direct “Import 15-Day Plan” shortcuts. Home lists due and overdue items with priority/duration and Done/Partial/Not Done actions, plus prayer, fasting/wellness, goals, shared-local, and Screen Time entry points. Plan supports local task, routine, and habit definitions, completion results, archive, safe tombstone deletion, date selection, file-based plan import, and an initial approval-only rolling carryover proposal. The rolling proposal is partial and does not yet account for goals, deadlines, or all routine workload. Goals keep append-only measurements and show progress. Insights summarizes recent activity, habits, tracking, and upcoming imported tasks. Authentication includes sign-in, sign-out, password reset, persisted Firebase auth state, and protected app routes. There is no in-app account creation.
+## Technology and layout
 
-## Requirements
+Flutter/Dart, Riverpod, GoRouter, Drift/SQLite, Firebase Authentication, Cloud Firestore, and Firebase Functions. Feature code lives under `lib/features/`; local data uses the versioned Drift database. Firebase is used for authentication and a separately gated assigned-task projection, not general record sync.
 
-The target implementation uses Flutter/Dart and requires separate authenticated accounts, private personal records, explicitly shared progress, offline-first storage, cross-device synchronization, prayer and routine tracking, learning evidence, Android app-wise screen-time reports, PDF/JSON reports, and approval-based 14-day adaptive planning. See `docs/PROJECT_SPEC.md` for the full requirements.
+Useful project notes are in [implementation status](docs/IMPLEMENTATION_STATUS.md), [architecture decisions](docs/DECISIONS.md), and the [project specification](docs/PROJECT_SPEC.md). The specification includes planned requirements and should not be read as a list of delivered features.
 
-## Development environment
+## Develop locally
 
-Phase 1 was developed with Flutter 3.41.2 stable and Dart 3.11.0. Android SDK 36.1.0 and Android Studio JDK 21 are detected. Gradle wrapper 8.14, Android Gradle Plugin 8.11.1, and Kotlin 2.2.20 are configured.
+Install Flutter/Dart, Android Studio or Android SDK tools, Node.js, npm, and the Firebase CLI. Then run from the repository root:
 
-Direct app packages include `cupertino_icons`, `go_router`, `flutter_riverpod`, `firebase_core`, `firebase_auth`, `drift`, `path`, `path_provider`, `flutter_local_notifications`, `timezone`, `file_picker`, `csv`, `archive`, `xml`, `crypto`, and `flutter_pdf_text`. `drift_dev` and `build_runner` generate the Drift database code. PDF text extraction and task evidence storage run locally; camera capture, scanned-PDF OCR, PDF reports, JSON backup/restore, and cloud synchronization are not implemented. Android Usage Access is a user-granted special access and is unavailable on other platforms. The server-side account gate uses Firebase Functions v2 and Node.js 20.
-
-Install Flutter and Android Studio/SDK, then from the project root run:
-
-```powershell
-flutter doctor -v
+```bash
 flutter pub get
-```
-
-Android SDK licenses were reported as accepted by `flutter doctor -v` during Firebase configuration verification. Connect an Android device with developer options/USB debugging enabled or start an emulator.
-
-## Firebase authentication setup
-
-Firebase is configured locally for project `life-os-abdullah-jannat`. The generated `lib/firebase_options.dart` contains Android options, and `android/app/google-services.json` is wired through the Google Services Gradle plugin. `main.dart` initializes Firebase with `DefaultFirebaseOptions.currentPlatform` before `runApp`. The generated files are ignored by Git and must be created locally with FlutterFire on each development machine.
-
-To configure a new checkout or regenerate options:
-
-1. Install FlutterFire CLI if needed: `dart pub global activate flutterfire_cli`.
-2. Run `flutterfire configure --project <PROJECT_ID> --platforms android` from the project root. Ensure the Firebase Android app uses the current application ID `com.example.life_os`.
-3. Run `flutter pub get`. Launch normally; no `firebase.local.json` or `--dart-define` values are required.
-
-To use sign-in, confirm Email/Password is enabled in Firebase Console and use an already provisioned account. The app has no public sign-up screen. Until the Identity Platform allowlist functions are deployed, Firebase may allow any existing email/password account in this project to sign in; the two-user restriction is not active. Deploying those functions requires Identity Platform and Cloud Functions billing and is outside the current phase. Never put account passwords or service-account credentials in the mobile app. See Firebase's [Flutter password auth guide](https://firebase.google.com/docs/auth/flutter/password-auth).
-
-## Offline data foundation
-
-Drift opens `life_os.sqlite` in the app support directory. Schema version 5 contains UID-keyed `profiles`, `stored_records`, append-only `activity_history`, date-keyed `tracking_entries`, and the task-plan import receipt ledger. Definitions use a common record envelope with typed ownership, visibility, UTC timestamp, revision, sync-status, conflict, and deletion columns; feature data lives in validated JSON payloads. Activity history stores task/routine/habit completion snapshots and goal measurements. Tracking entries support prayer, fasting, sleep, and workout data with active-entry uniqueness, including one sleep entry per user per local wake-up date. Version 5 adds only the local task-plan import receipt table after version 4 tracking entries.
-
-Database migrations use Drift's versioned `MigrationStrategy`. Version 2 added a nullable deletion timestamp to the version 1 record table; version 3 adds activity history; version 4 adds tracking entries and indexes; version 5 adds task-plan import receipts. Migration fixtures cover upgrades from versions 1 through 4. Local timestamps use UTC epoch milliseconds while tracked dates use the device's current local calendar date. A timezone change does not rewrite saved local dates or schedule snapshots. Local deletes create tombstones, and changed records increment a revision.
-
-Phase 5 is implemented locally and awaits review. The prayer UI supports private manual schedule configuration for Fajr, Dhuhr, Asr, Maghrib, and Isha plus date-specific prayer status, optional Jamaat status, and notes. LIFE OS does not calculate prayer times. Android reads the current system timezone for schedule snapshots; dated history keeps its saved timezone and times after schedule edits. Local prayer notifications are enabled only when the user opts in and Android notification permission is granted. Azan and up to six five-minute reminders are scheduled before Jamaat over a seven-day local horizon; prayer completion, dismissal, schedule changes, account changes, permission changes, resume, and detected date/timezone changes reconcile the schedule. Dismissal and one-time snooze state are stored locally for the active UID. Notification permission is separate from exact-alarm access: when notifications are allowed but exact access is unavailable, LIFE OS uses inexact scheduling and warns that delivery may be delayed. Fasting supports date-specific Fasted/Not fasted records with optional notes and an unrecorded state. Wellness supports one sleep duration per local wake-up date and multiple dated workout logs. These private-by-default records use the UID-bound local repository, revision-checked edits, and tombstone deletion. Home and Insights show local fasting and wellness summaries; unrecorded dates are not counted as missed. Cloud synchronization remains off. Manual Android notification delivery/recovery checks still depend on device and Android version; see `docs/PRAYER_NOTIFICATION_SMOKE_TEST.md`.
-
-The repository and remote-store interfaces separate local persistence from future Firestore access. Today all saves stay local with `localOnly` status; `synchronize()` explicitly fails closed. A future conflict with different content is retained for resolution instead of automatically overwriting local data. No Firestore adapter, network read/write, queue, or security rules are implemented.
-
-Repository calls use the current Firebase Auth UID rather than a caller-supplied UID. The record watch switches with auth-state changes and cancels the previous UID's watch on sign-out/account switch. Owner checks and shared/private visibility filters are local app safeguards, not a security boundary. Shared histories are visible to another account only while the current definition remains shared, active, and not tombstoned. All Phase 4 writes remain local; the UI displays that cloud sync is off. Do not enable remote writes until Firestore rules are implemented and tested. The two-account Identity Platform allowlist functions are still undeployed, so Firebase may allow any existing email/password account in the project to sign in.
-
-The database and evidence files reside in app-specific internal storage. Android's sandbox restricts access by other ordinary apps, while storage encryption depends on Android version/device configuration ([Android storage guidance](https://developer.android.com/training/data-storage/app-specific)). LIFE OS does not add database-level encryption or an app lock. Android backup rules exclude the private evidence directory from cloud backup and device transfer, but do not yet define a tested database backup/restore policy. The SQLite database may be included in Android Auto Backup; evaluate retention and restore before collecting real records ([Android Auto Backup](https://developer.android.com/identity/data/autobackup)). Because prayer, learning, and screen-time records are personal, evaluate app-level encryption with Android Keystore key management if unlocked-device, backup, rooted-device, or storage-extraction risks are in scope. Keystore key material is designed to be harder to extract than a key stored in app files ([Android Keystore](https://developer.android.com/privacy-and-security/keystore)); encryption would not replace account authorization or server rules.
-
-## Permissions and configuration
-
-Prayer notifications declare `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, and `SCHEDULE_EXACT_ALARM`; notification permission is requested only after the user taps its control, while exact-alarm access is checked and can be granted separately. LIFE OS does not declare `USE_EXACT_ALARM`. Android's notification channel can be adjusted from the app notification settings. Authentication uses Firebase SDK-managed session persistence; the app does not store passwords. Future features may request Android Usage Access through the system settings flow for app usage statistics and user-selected media access for evidence. Usage Access is a special user-granted Android setting, not a normal runtime permission. No prayer location/provider or AI service is configured.
-
-Scheduled notifications are local device requests, not proof of delivery. Inexact alarms may be delayed; Doze, force-stop, notification denial, and manufacturer battery controls can suppress or delay delivery. The plugin boot receiver restores managed schedules after reboot, and the app reconciles on resume. Device/emulator checks for permission prompts, exact-alarm settings, reboot, timezone changes, Doze, and OEM behavior are still required. No remote writes, Cloud Functions, Firebase account enforcement, or Firebase billing changes were made for this milestone.
-
-## Validation
-
-```powershell
-dart format lib test
 flutter analyze
 flutter test
+flutter build apk --release
 ```
 
-Phase 2–5 results are recorded in `docs/IMPLEMENTATION_STATUS.md`. Auth widget tests use a fake auth repository and do not validate live sign-in. Data and planning/tracking repository tests use in-memory SQLite. Firebase options are loaded locally through the generated FlutterFire file.
+Cloud Functions unit tests:
 
-## Build
-
-After an Android device/emulator is available:
-
-```powershell
-flutter build apk --debug
+```bash
+node functions/test/auth_allowlist.test.js
 ```
 
-Release signing, application ID, privacy disclosures, Firebase rules, and permission rationale must be reviewed before production release. The current Android release configuration uses debug signing and is not release-ready.
+Firestore Rules tests require Java 21 or later, the Firestore Emulator, and the test dependencies. Install them once with `npm ci --prefix security-tests`. Tests use the isolated `demo-life-os` project ID; do not replace it with a production project ID:
+
+```bash
+firebase emulators:exec --project demo-life-os --only firestore "node security-tests/firestore.rules.test.cjs"
+```
+
+## Configure your own Firebase project
+
+Firebase client configuration is project-specific. Create your own Firebase project and Android app, enable Email/Password sign-in if needed, install FlutterFire CLI, then generate local options:
+
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure --project YOUR_PROJECT_ID --platforms android
+```
+
+The generated `lib/firebase_options.dart` and `android/app/google-services.json` are ignored by Git. Never place service-account credentials in the app. Firebase client API keys and app IDs identify a project but are not server credentials; protect data with authentication and server-side Rules.
+
+The Functions in `functions/` use Firebase Authentication blocking events and the `LIFE_OS_ALLOWED_EMAILS` deployment parameter. Configure that parameter privately with the exact invited account addresses; never commit the values. The app has no public sign-up UI, but an allowlist is not enforced until the blocking functions are deployed and active. These functions require Firebase Authentication with Identity Platform, and Cloud Functions deployment requires the Blaze billing plan. Check current pricing and set budget alerts before enabling paid services.
+
+### Assigned-task membership provisioning
+
+The client cannot create or edit `lifeOsMembers` documents. An authorized Firebase administrator must independently verify the intended Auth UIDs, then create one record per paired user at `lifeOsMembers/{uid}` with `active: true` and reciprocal `peerUid` values. Review both identities and the deployed `firestore.rules` before enabling shared tasks. Do not infer membership from an email allowlist, accept a UID from the client, or activate arbitrary users. Deactivate membership to revoke access. This repository does not implement automatic provisioning; production membership and rules are unverified.
+
+To run or deploy Firebase services, explicitly select your own project and review the target first. Deploying Rules or Functions changes a remote project; no deployment is part of the local development commands above.
+
+## Security and data handling
+
+The Firestore Rules default-deny other document paths and forbid client membership writes. The local emulator suite passes against `demo-life-os` using synthetic identities; this does not verify deployed production rules or memberships. The allowlist limits authentication only when its blocking functions are active; it does not provision shared-task membership. Local SQLite and evidence files are not app-level encrypted. Android Auto Backup is not disabled, and the current exclusion rules cover evidence files only; the local database may be included in Android backups depending on device settings. Review that policy before storing real personal records. Backups and PDF reports may contain sensitive data; store and share them accordingly.
+
+## Asset attribution
+
+The bundled Noto Sans Arabic and Bengali fonts include SIL Open Font License 1.1 notices in `assets/fonts/`. The repository has no source or license note for `assets/branding/life_os_icon.png` or the derived Android launcher icons. Confirm that the project owner created or may redistribute that artwork before publishing; add attribution if it came from a third party.
+
+See [SECURITY.md](SECURITY.md) for responsible-disclosure guidance. GitHub private vulnerability reporting has not been verified as enabled for this repository; do not post exploit details in public issues. If no private reporting route is available, request one privately from the repository owner or organization administrator without including vulnerability details.
+
+## License
+
+No license is included. Public visibility does not grant general permission to use, modify, or redistribute this code or its assets. Obtain the owner's license decision before adding a license or granting reuse permission.

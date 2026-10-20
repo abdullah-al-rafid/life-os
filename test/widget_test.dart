@@ -81,7 +81,7 @@ void main() {
 
     await tester.tap(find.text('Settings').last);
     await tester.pumpAndSettle();
-    expect(find.text('Signed in as'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
     expect(find.text('rafid@example.com'), findsOneWidget);
 
     await tester.tap(find.text('Sign out'));
@@ -118,10 +118,10 @@ void main() {
     },
   );
 
-  testWidgets('wide layout keeps a persistent side navigation rail', (
+  testWidgets('wide short layout keeps a scrollable side navigation rail', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.physicalSize = const Size(900, 400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -129,8 +129,42 @@ void main() {
     await tester.pumpWidget(_app(FakeAuthRepository(initialUser: _testUser)));
     await tester.pumpAndSettle();
     expect(find.text('WORKSPACE'), findsOneWidget);
-    expect(find.text('Insights'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -320));
+    await tester.pumpAndSettle();
+    expect(find.text('Progress'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'compact navigation reaches each primary destination without overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_app(FakeAuthRepository(initialUser: _testUser)));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'on compact Home');
+
+      for (final (label, expected) in [
+        ('Plan', 'Today’s plan'),
+        ('Goals', 'Goals'),
+        ('Together', 'Together'),
+        ('Progress', 'Progress & Reports'),
+        ('Settings', 'Settings'),
+        ('Home', 'Make room for\nwhat matters.'),
+      ]) {
+        final destination = find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text(label),
+        );
+        await tester.tap(destination);
+        await tester.pumpAndSettle();
+        expect(find.text(expected), findsWidgets);
+      }
+    },
+  );
 
   testWidgets('dashboard exposes a direct 15-day import shortcut', (
     tester,

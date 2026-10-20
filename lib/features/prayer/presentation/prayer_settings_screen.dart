@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/tokens.dart';
 import '../../../core/widgets/async_state_view.dart';
+import '../../../core/widgets/life_os_components.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../domain/prayer_models.dart';
 import '../domain/prayer_reminder_service.dart';
@@ -62,17 +63,15 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
                 return ListView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
+                    PageHeader(
+                      title: 'Prayer settings',
+                      subtitle:
+                          'Choose local Azan and Jamaat times and reminder preferences.',
+                      actions: [
+                        OutlinedButton.icon(
                           onPressed: () => context.go('/prayer'),
                           icon: const Icon(Icons.arrow_back),
-                        ),
-                        Expanded(
-                          child: Text(
-                            'Prayer settings',
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          ),
+                          label: const Text('Prayer'),
                         ),
                       ],
                     ),
@@ -86,18 +85,11 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    SurfaceCard(
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lock_outline, color: AppColors.cyan),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Text(
-                              'Saved privately on this device · Cloud sync off',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
+                    const Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: PrivacySourceLabel(
+                        source: PrivacySource.privateLocal,
+                        details: 'Cloud sync is off',
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
