@@ -267,6 +267,7 @@ See [SECURITY.md](SECURITY.md) for responsible-disclosure guidance. GitHub priva
 This repository demonstrates practical work in Flutter application development, local-first data management, testing, documentation, and responsible AI-assisted engineering workflows.
 
 - [GitHub profile](https://github.com/abdullah-al-rafid)
+- [LinkedIn](https://www.linkedin.com/in/abdullah-al-rafid/)
 - [LIFE OS repository](https://github.com/abdullah-al-rafid/life-os)
 - [Synthetic Medical Data Generator](https://github.com/abdullah-al-rafid/synthetic-medical-data-generator)
 
