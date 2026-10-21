@@ -27,16 +27,27 @@ Flutter/Dart, Riverpod, GoRouter, Drift/SQLite, Firebase Authentication, Cloud F
 
 Useful project notes are in [implementation status](docs/IMPLEMENTATION_STATUS.md), [architecture decisions](docs/DECISIONS.md), and the [project specification](docs/PROJECT_SPEC.md). The specification includes planned requirements and should not be read as a list of delivered features.
 
+## Engineering case studies
+
+- [Fixing timezone-dependent Flutter tests](docs/case-studies/timezone-dependent-prayer-tests.md) — how machine-local `DateTime` fixtures caused prayer reminder tests to differ across timezones, and how the tests were made deterministic.
+- [Human-reviewed 15-day task import](docs/case-studies/human-reviewed-15-day-task-import.md) — how the local importer validates source files, previews and edits a 15-day plan, and requires explicit approval before saving tasks.
+
 ## Develop locally
 
-Install Flutter/Dart, Android Studio or Android SDK tools, Node.js, npm, and the Firebase CLI. Then run from the repository root:
+Install Flutter/Dart, Android Studio or Android SDK tools, Node.js, npm, and the Firebase CLI. On a clean checkout, first install dependencies and configure Firebase as described below. For a real configured app, FlutterFire must generate `lib/firebase_options.dart` and the Android app must have `android/app/google-services.json`; both are project-specific generated files and are ignored by Git. `firebase.json` documents the repository's Firebase CLI/emulator configuration, but it does not replace those generated client files.
+
+After configuration, run from the repository root in this order:
 
 ```bash
 flutter pub get
+dart pub global activate flutterfire_cli
+flutterfire configure --project YOUR_PROJECT_ID --platforms android
 flutter analyze
 flutter test
 flutter build apk --release
 ```
+
+The analysis and test commands can be run after `flutter pub get` on a clean checkout only in the GitHub Actions workflow's special CI mode: [.github/workflows/flutter-ci.yml](.github/workflows/flutter-ci.yml) creates a temporary, ignored `lib/firebase_options.dart` stub. The stub intentionally throws and does not configure or connect a real Firebase app; it exists only to let analysis and unit tests run. It is not suitable for a connected app or release build. No generated Firebase configuration or project credentials are supplied by this repository.
 
 Cloud Functions unit tests:
 
@@ -55,11 +66,10 @@ firebase emulators:exec --project demo-life-os --only firestore "node security-t
 Firebase client configuration is project-specific. Create your own Firebase project and Android app, enable Email/Password sign-in if needed, install FlutterFire CLI, then generate local options:
 
 ```bash
-dart pub global activate flutterfire_cli
 flutterfire configure --project YOUR_PROJECT_ID --platforms android
 ```
 
-The generated `lib/firebase_options.dart` and `android/app/google-services.json` are ignored by Git. Never place service-account credentials in the app. Firebase client API keys and app IDs identify a project but are not server credentials; protect data with authentication and server-side Rules.
+The generated `lib/firebase_options.dart` and `android/app/google-services.json` are ignored by Git, so each clean checkout that needs a real Firebase app must generate or restore them locally. The required Firebase project setup beyond generating client configuration—such as the exact Authentication provider state, deployed Rules, Functions, billing, and authorized accounts—cannot be verified from this repository and must be completed and checked in the Firebase project. Never place service-account credentials in the app. Firebase client API keys and app IDs identify a project but are not server credentials; protect data with authentication and server-side Rules.
 
 The Functions in `functions/` use Firebase Authentication blocking events and the `LIFE_OS_ALLOWED_EMAILS` deployment parameter. Configure that parameter privately with the exact invited account addresses; never commit the values. The app has no public sign-up UI, but an allowlist is not enforced until the blocking functions are deployed and active. These functions require Firebase Authentication with Identity Platform, and Cloud Functions deployment requires the Blaze billing plan. Check current pricing and set budget alerts before enabling paid services.
 
@@ -71,7 +81,7 @@ To run or deploy Firebase services, explicitly select your own project and revie
 
 ## Security and data handling
 
-The Firestore Rules default-deny other document paths and forbid client membership writes. The local emulator suite passes against `demo-life-os` using synthetic identities; this does not verify deployed production rules or memberships. The allowlist limits authentication only when its blocking functions are active; it does not provision shared-task membership. Local SQLite and evidence files are not app-level encrypted. Android Auto Backup is not disabled, and the current exclusion rules cover evidence files only; the local database may be included in Android backups depending on device settings. Review that policy before storing real personal records. Backups and PDF reports may contain sensitive data; store and share them accordingly.
+The Firestore Rules default-deny other document paths and forbid client membership writes. On 2026-10-20, the local Firestore Emulator suite passed 11/11 tests against `demo-life-os` using synthetic identities; this does not verify deployed production rules or memberships. The CI workflow does not run these emulator tests. The allowlist limits authentication only when its blocking functions are active; it does not provision shared-task membership. Local SQLite and evidence files are not app-level encrypted. Android Auto Backup is not disabled, and the current exclusion rules cover evidence files only; the local database may be included in Android backups depending on device settings. Review that policy before storing real personal records. Backups and PDF reports may contain sensitive data; store and share them accordingly.
 
 ## Asset attribution
 
